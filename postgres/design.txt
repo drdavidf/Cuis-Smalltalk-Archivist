@@ -1,0 +1,83 @@
+Versioned objects
+
+Every object has a unique identifier (oid) that identifies the same object in different versions, and an object type identifier. The system uses Negative integers for system types, user defined types are positive integers. 
+
+The type of plain versioned objects is -1.
+
+The object’s history is a sequence (oid,1),…,(oid,n) the last rid in the sequence is called the head revision identifier.
+
+Revisions 
+
+A revision is uniquely identified by an (oid,rid) pair and in addition contains the particular object state for that revision. Every revision is associated with exactly one changeset.
+
+Changesets 
+
+A changeset has a unique identifier, a timestamp, an author, a comment, and a set of revision identifiers. It identifies the object  revisions that were created at a point in time. It satisfies the following rules:
+
+	1.	An oid can appear at most once in a changeset
+	2.	Let x be a changeset occurring later than changeset y. Then for every oid that appears in both changesets, rid in x > rid in y. 
+	3.	An (oid,rid) pair is in a changeset x iff it identifies a revision whose cid is x.
+
+Links
+
+A link is a versioned object that connects a source object to a target object. 
+
+Link revisions contain (in addition to the information in basic revisions) the revision identifiers of both source and target objects.
+
+Every link is associated with a single object. That object is the link’s source object. 
+
+A link has a name. The name is unique among the names of links with the same source object.
+
+The type identifier of link objects is -2.
+
+The principle of immutable past
+
+Any change in the system’s state cannot affect its state at past times. For example, if at time t1 object x was the target of a link y and at time t2>t1  that link was removed and hen when we query the system for its state at time t1 we should still be able to find that y links to x.
+
+Because we cannot change the past, we need to explicitly mark a link as
+removed, otherwise there is no way to know that from a certain point in time
+the link is no longer available. Thus, every link revision has a deleted field that is set to true if the link was deleted. 
+
+Operations 
+
+All modifications to the system state must be captured by a changeset.
+
+Create a changeset
+
+Input: author, comment, list of changes to objects followed by list of changes to links
+
+Precondition: 
+	1.	the input has at most one change for each oid, 
+	2.	the rid of each existing  object in the input is 1 + the head of that object. 
+	3.	The src & trgt of each link exists either in the system or in the input.
+	4.	Each name has at most one link with the same src. 
+
+Operation:
+
+	1.	Add a changeset whose cid is 1 + max(cid) and set its creation time to ‘now’, author to author and comment to comment.
+	2.	Add a revision for each object change
+	3.	Add a revision for each link change
+
+Add a revision to an object
+
+Input: state, oid, cid 
+
+	1.	If oid does not exist create a new versioned object and set head(oid) to 0
+	2.	Assert that  rid = head(oid) + 1
+	3.	Create revision with oid,cid,rid, state
+	4.	Set head(oid) to rid
+
+Add a revision to a link
+
+Input: src & trgt ids, oid, cid, name
+Precondition: src exists, trgt exists
+Operation:
+	1.	If oid does not exist create a new versioned object and set its type to link, set head(oid) to 0
+	2.	Assert that rid = head(oid) +1
+	3.	Create revision with oid,cid,rid,name,src & trgt
+	4.	Set head(oid) to rid
+
+Removing a link
+
+
+
