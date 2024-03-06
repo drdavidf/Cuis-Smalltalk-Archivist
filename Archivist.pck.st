@@ -1,7 +1,8 @@
-'From Cuis6.0 [latest update: #6153] on 5 March 2024 at 10:48:32 am'!
+'From Cuis6.3 [latest update: #6253] on 5 March 2024 at 8:19:56 pm'!
 'Description '!
-!provides: 'Archivist' 1 45!
+!provides: 'Archivist' 1 46!
 !requires: 'PostgresAdapter' 1 62 nil!
+!requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
 SystemOrganization addCategory: #Archivist!
 
