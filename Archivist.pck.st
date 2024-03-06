@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 5 March 2024 at 8:19:56 pm'!
+'From Cuis6.0 [latest update: #6153] on 6 March 2024 at 1:46:16 pm'!
 'Description '!
-!provides: 'Archivist' 1 46!
+!provides: 'Archivist' 1 54!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -15,6 +15,16 @@ TextProvider subclass: #ArchivistCacheModel
 	category: 'Archivist'!
 !classDefinition: 'ArchivistCacheModel class' category: #Archivist!
 ArchivistCacheModel class
+	instanceVariableNames: ''!
+
+!classDefinition: #NonDeterministicChoice category: #Archivist!
+OrderedCollection subclass: #NonDeterministicChoice
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist'!
+!classDefinition: 'NonDeterministicChoice class' category: #Archivist!
+NonDeterministicChoice class
 	instanceVariableNames: ''!
 
 !classDefinition: #ArchivistCacheWindow category: #Archivist!
@@ -115,6 +125,16 @@ VersionedEntity subclass: #VersionedObjectStub
 	category: 'Archivist'!
 !classDefinition: 'VersionedObjectStub class' category: #Archivist!
 VersionedObjectStub class
+	instanceVariableNames: ''!
+
+!classDefinition: #ChoiceField category: #Archivist!
+SelectField subclass: #ChoiceField
+	instanceVariableNames: 'key obj'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist'!
+!classDefinition: 'ChoiceField class' category: #Archivist!
+ChoiceField class
 	instanceVariableNames: ''!
 
 
@@ -258,7 +278,11 @@ slots
 	^selection content "associations collect:[: each | JsonListItemWrapper with: each ]"
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/4/2024 22:45:37'!
+!NonDeterministicChoice class methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:29:25'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold fields add: (ChoiceField new on: aKey of: anObject )! !
+
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:54:08'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -266,7 +290,7 @@ self layoutMorph addMorph:
 (TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
 </>
 (
-	(PluggableListMorph model: model listGetter: #oidDisplayList indexGetter: #selectionIndex indexSetter: #selectionIndex: mainView: self menuGetter: #menu keystrokeAction: nil :: ph:1 ; pw:0.25)
+	(PluggableListMorph model: model listGetter: #oidDisplayList indexGetter: #selectionIndex indexSetter: #selectionIndex: mainView: self menuGetter: #residentObjectsMenu keystrokeAction: nil :: ph:1 ; pw:0.25)
 	<+>
 	(PluggableListMorph model: model listGetter: #incoming indexGetter: nil indexSetter: nil :: ph:1 ; pw:0.25)
 	<+>
@@ -293,36 +317,6 @@ fetchObject
 
 	model fetchObject.
 	! !
-
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 20:09:33'!
-menu
-
-	| aMenu |
-	
-	aMenu := MenuMorph new defaultTarget: self.
-	
-	aMenu addTitle: 'Resident objects'.
-	aMenu addItemsFromDictionaries: `{
-		{
-			#label 			-> 			'commit changes ...'.
-			#selector 		-> 			#openCommitDialog .
-			#balloonText 	-> 			'Commit all the changes to objects that were modified since the last commit.'
-		} asDictionary.
-
-		{
-			#label 			-> 			'clone'.
-			#selector 		-> 			#cloneSelectedObject.
-			#balloonText 	-> 			'Clone the selected object. The selected object becomes the clone''s prototype.'
-		} asDictionary.
-
-		{
-			#label 			-> 			'fetch'.
-			#selector 		-> 			#fetchObject.
-			#balloonText 	-> 			'Replace the selected stub with the actual object.'
-		} asDictionary.
-
-	}`.
-	^aMenu! !
 
 !ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 19:48:48'!
 openCommitDialog
@@ -354,6 +348,36 @@ openCommitDialog
 	panel morphPosition: panel morphPosition - (cp - cw).
 
 ! !
+
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:54:08'!
+residentObjectsMenu
+
+	| aMenu |
+	
+	aMenu := MenuMorph new defaultTarget: self.
+	
+	aMenu addTitle: 'Resident objects'.
+	aMenu addItemsFromDictionaries: `{
+		{
+			#label 			-> 			'commit changes ...'.
+			#selector 		-> 			#openCommitDialog .
+			#balloonText 	-> 			'Commit all the changes to objects that were modified since the last commit.'
+		} asDictionary.
+		nil.
+		{
+			#label 			-> 			'clone'.
+			#selector 		-> 			#cloneSelectedObject.
+			#balloonText 	-> 			'Clone the selected object. The selected object becomes the clone''s prototype.'
+		} asDictionary.
+
+		{
+			#label 			-> 			'fetch'.
+			#selector 		-> 			#fetchObject.
+			#balloonText 	-> 			'Replace the selected stub with the actual object.'
+		} asDictionary.
+
+	}`.
+	^aMenu! !
 
 !PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:48:07'!
 initialize
@@ -393,7 +417,7 @@ layoutSubmorphs
 objectGetter: aSymbol
 	objectGetter := aSymbol! !
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:48:00'!
+!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:45:45'!
 update: aSymbol
 
 	| obj form |
@@ -402,7 +426,7 @@ update: aSymbol
 	
 	obj := 	model perform: objectGetter.
 	
-	obj keys do: [:key | mold integerField label: key ; on: key asSymbol of: obj ].
+	obj keysAndValuesDo: [:key :value | ( value class addFieldOn:obj at:key to: mold ) label: key ; customize:[:w :i :e | i borderColor: Color veryLightGray ] ].
 	
 	form := obj isEmpty ifTrue:[LabelGroup new] ifFalse:[mold renderForms].
 	
@@ -966,6 +990,40 @@ oid: anInteger
 removeIncoming: aLink
 	in remove: aLink! !
 
+!ChoiceField methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:24:51'!
+on: aSymbol of: model
+
+	key := aSymbol.
+	
+	obj := model.
+	
+	^super on: #listIndex of: (ListModel with: (model at: key))! !
+
+!ChoiceField methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:22:08'!
+save
+	
+	obj at: key put: listModel selectedItem.! !
+
+!Boolean class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:46:42'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold checkboxField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Float class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:49:00'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold floatField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Integer class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:49:21'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold integerField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Time class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:50:17'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold timeField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Date class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:50:05'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold dateField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
 !CharacterSequence methodsFor: '*Archivist' stamp: 'DF 3/2/2024 22:13:08'!
 jsonPrint
 	
@@ -977,13 +1035,21 @@ jsonPrint
 	
 	^aWriteStream contents ! !
 
+!CharacterSequence class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 13:44:56'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold stringField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
 !Text methodsFor: '*Archivist' stamp: 'DF 3/2/2024 22:12:50'!
 jsonPrint
 
 	^self string jsonPrint
 	! !
 
-!JsonObject methodsFor: '*Archivist' stamp: 'DF 3/5/2024 09:41:18'!
+!Text class methodsFor: '*Archivist' stamp: 'DF 3/6/2024 12:50:39'!
+addFieldOn: anObject at: aKey to: aMold
+	^aMold textField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!JsonObject methodsFor: '*Archivist' stamp: 'DF 3/6/2024 13:32:29'!
 merge: newJsonObject old: oldJsonObject
 
 	| keys result |
@@ -1005,6 +1071,6 @@ merge: newJsonObject old: oldJsonObject
 			ifTrue: [ result add: each -> (Set with: (newJsonObject at:each)) ] ].
 		
 	^ JsonObject fromAssociations: (result collect:[:each | | v | 
-		v := each value size = 1 ifTrue:[each value anyOne] ifFalse:[each value]. 		each key -> v ])
+		v := each value size = 1 ifTrue:[each value anyOne] ifFalse:[NonDeterministicChoice new addAll: each value ; yourself]. 		each key -> v ])
 			
 ! !
