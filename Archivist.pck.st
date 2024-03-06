@@ -1,6 +1,6 @@
-'From Cuis6.0 [latest update: #6153] on 6 March 2024 at 1:46:16 pm'!
+'From Cuis6.3 [latest update: #6253] on 6 March 2024 at 10:52:21 pm'!
 'Description '!
-!provides: 'Archivist' 1 54!
+!provides: 'Archivist' 1 60!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -278,6 +278,15 @@ slots
 	^selection content "associations collect:[: each | JsonListItemWrapper with: each ]"
 ! !
 
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:21:35'!
+updateSlots
+	
+	self assert: selection notNil.
+	
+	selection dirty: true.
+	
+	self changed: #oidDisplayList ; changed: #selectionDetails! !
+
 !NonDeterministicChoice class methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:29:25'!
 addFieldOn: anObject at: aKey to: aMold
 	^aMold fields add: (ChoiceField new on: aKey of: anObject )! !
@@ -349,7 +358,7 @@ openCommitDialog
 
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:54:08'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:03:42'!
 residentObjectsMenu
 
 	| aMenu |
@@ -362,6 +371,11 @@ residentObjectsMenu
 			#label 			-> 			'commit changes ...'.
 			#selector 		-> 			#openCommitDialog .
 			#balloonText 	-> 			'Commit all the changes to objects that were modified since the last commit.'
+		} asDictionary.
+		{
+			#label 			-> 			'merge latest changes'.
+			#selector 		-> 			#mergeLatestChanges .
+			#balloonText 	-> 			'Load the latest changes to objects resident in the cache and merge their content with the content of any modified objects.'
 		} asDictionary.
 		nil.
 		{
@@ -379,7 +393,7 @@ residentObjectsMenu
 	}`.
 	^aMenu! !
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:48:07'!
+!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:05:08'!
 initialize
 
 	| widget |
@@ -388,7 +402,7 @@ initialize
 	
 	scrollPane := PluggableScrollPane new. 
  
-	button := PluggableButtonMorph new label: 'Save'.
+	button := PluggableButtonMorph model: self action: #save label: 'Save'.
 		
 	widget := (scrollPane pw:1 ; ph:1) </> (button align: #rightOrBottom).
 	
@@ -416,6 +430,13 @@ layoutSubmorphs
 !PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/4/2024 20:03:53'!
 objectGetter: aSymbol
 	objectGetter := aSymbol! !
+
+!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:15:05'!
+save
+
+	mold validate.
+	
+	mold isValid ifTrue: [mold save. model updateSlots ].! !
 
 !PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:45:45'!
 update: aSymbol
@@ -456,7 +477,7 @@ contents
 		
 	^Array new! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/3/2024 20:34:56'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:50:22'!
 checkin: comment 
 
 	| changes aWriteStream statement result base |
@@ -487,18 +508,15 @@ checkin: comment
 
 	base := result recordsAsDictionaries first at:#_max_oid.
 	
-	"Replace the fresh objects in vobjects by removing their association to the fresh (negative) keys
-	and adding them back with their persistent keys"
-	
-	fresh do:[:each | vobjects removeKey: each oid]. 
-	
-	fresh do:[:each | each rid:1 ; fix:base ].
+	fresh do:[:each | each rid:0 ; fix:base ].
 
-	vobjects addAll: fresh.
+	fresh do:[:each | vobjects at: each oid put: each ].
 
 	vobjects do:[:each | each dirty ifTrue:[ each incrementRid ; clean ] ]. 
 	
 	fresh := Dictionary new.
+	
+	next := -1.
 	! !
 
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:25:06'!
@@ -521,11 +539,13 @@ clone: aVersionedObject
 connection: aPgConnection
 	connection := aPgConnection! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 12:44:58'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:43:34'!
 deferredFetch: oid
 
 	oid ifNil:[^nil]. 
 
+	self assert: oid > 0.
+	
 	^ vobjects at: oid ifAbsent:[ | vobj |
 		vobj := VersionedObjectStub new oid: oid ; cache: self ; yourself. 
 		vobjects at: oid put: vobj. vobj		]. ! !
@@ -732,10 +752,12 @@ rid: anInteger
 isObject
 	^true! !
 
-!VersionedObject methodsFor: 'converting' stamp: 'DF 3/3/2024 22:46:30'!
+!VersionedObject methodsFor: 'converting' stamp: 'DF 3/6/2024 20:37:33'!
 asJSON
 
 	| aWriteStream |
+	
+	self assert: ((oid < 0 and: [rid isNil]) or:[oid > 0 and:[rid notNil] ]).
 	
 	aWriteStream := WriteStream on: ''.
 	
@@ -743,7 +765,7 @@ asJSON
 		id := assoc value ifNil:[0] ifNotNil:[assoc value oid]. 
 		aWriteStream nextPutAll: ('\{"target":{1}, "name":"{2}" \}' format: { id . assoc key} ) ] separatedBy: [ aWriteStream nextPutAll: ','].
 
-^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid . (Json render: content)  . description jsonPrint . aWriteStream contents }! !
+^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid ifNil:[0] . (Json render: content)  . description jsonPrint . aWriteStream contents }! !
 
 !VersionedObject methodsFor: 'initialization' stamp: 'DF 3/2/2024 21:17:22'!
 initialize

@@ -15,15 +15,34 @@ END; $$
 
 ;
 
+CREATE OR REPLACE FUNCTION conflicts(_entities jsonb) RETURNS TABLE(oid int, rid int, head int)
+AS $$
+	SELECT j.oid, j.rid, vobject.head FROM (SELECT (value -> 'oid')::int as oid , (value -> 'rid')::int as rid FROM jsonb_array_elements(_entities)) AS j JOIN vobject ON j.oid = vobject.oid WHERE j.oid > 0 AND j.rid < vobject.head $$
+LANGUAGE SQL ;
+
+;
+
 CREATE OR REPLACE PROCEDURE new_changeset(_comment text, _entities jsonb, OUT _max_oid integer)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+_has_conflicts integer;
 _max_cid integer;
 _cid integer;
 _entity json;
 _author text;
 BEGIN
+
+-- first ensure that we are not running over later changes.
+
+_has_conflicts := 0;
+
+SELECT COUNT(*) FROM conflicts(_entities) INTO _has_conflicts;
+
+IF _has_conflicts > 0 THEN
+	RAISE EXCEPTION 'could not commit changeset'
+	USING HINT = 'Some objects in the changeset have a more recent version.  Merge them before attempting to commit again.';
+END IF;
 
 SELECT CURRENT_ROLE INTO _author;
 
