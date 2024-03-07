@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 6 March 2024 at 10:52:21 pm'!
+'From Cuis6.0 [latest update: #6153] on 7 March 2024 at 1:45:12 pm'!
 'Description '!
-!provides: 'Archivist' 1 60!
+!provides: 'Archivist' 1 70!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -59,7 +59,7 @@ JsonListItemWrapper class
 
 !classDefinition: #ArchivistCache category: #Archivist!
 Object subclass: #ArchivistCache
-	instanceVariableNames: 'connection vobjects fresh next'
+	instanceVariableNames: 'connection vobjects fresh next toDelete'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Archivist'!
@@ -165,6 +165,21 @@ commit: aText
 	
 	self changed: #oidDisplayList ; changed: #selectionDetails! !
 
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:20:26'!
+deleteSelectedObject
+
+	selection ifNil:[^self].
+	
+	cache delete: selection.
+	
+	selection := nil.
+	
+	self selectionIndex: self selectionIndex. "not terribly efficient but this way we have just one place that sends  change messages"
+	
+	
+	
+	! !
+
 !ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:29:53'!
 description
 
@@ -227,13 +242,13 @@ oids
 		
 	^oids sort! !
 
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 16:23:44'!
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:31:09'!
 outgoing
-	selection ifNil:[^{}].
+	selection ifNil:[^Dictionary new].
 	
-	selection isKindOf: VersionedObject :: ifFalse:[^''].
+	selection isRealized ifFalse:[^Dictionary new].
 
-	^selection outgoing associations collect:[:each | each key -> (each value ifNil:[each value] ifNotNil:[each value oid]) ].! !
+	^selection outgoing collect:[:each | each value ifNil:[0] ifNotNil:[each oid] ].! !
 
 !ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:04:41'!
 selectionDetails
@@ -268,14 +283,20 @@ selectionIndex: anInteger
 	self changed: #oidDisplayList; changed: #description ; changed: #incoming ; changed: #outgoing ; changed: #selectionDetails ; changed: #slots
 	! !
 
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/4/2024 20:39:53'!
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 13:21:05'!
 slots
 
+	| aDictionary |
+	
 	selection ifNil:[^JsonObject new].
 	
 	selection isRealized ifFalse:[^JsonObject new].
 	
-	^selection content "associations collect:[: each | JsonListItemWrapper with: each ]"
+	aDictionary := OrderedDictionary new addAll: selection content associations ; yourself.
+	
+	aDictionary addAll: (selection outgoing collect:[:each | each value ifNil:[0] ifNotNil:[each oid] ]).
+	
+	^aDictionary
 ! !
 
 !ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:21:35'!
@@ -291,7 +312,7 @@ updateSlots
 addFieldOn: anObject at: aKey to: aMold
 	^aMold fields add: (ChoiceField new on: aKey of: anObject )! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:54:08'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 13:03:11'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -299,13 +320,11 @@ self layoutMorph addMorph:
 (TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
 </>
 (
-	(PluggableListMorph model: model listGetter: #oidDisplayList indexGetter: #selectionIndex indexSetter: #selectionIndex: mainView: self menuGetter: #residentObjectsMenu keystrokeAction: nil :: ph:1 ; pw:0.25)
+	(PluggableListMorph model: model listGetter: #oidDisplayList indexGetter: #selectionIndex indexSetter: #selectionIndex: mainView: self menuGetter: #residentObjectsMenu keystrokeAction: nil :: ph:1 ; pw:(1/3))
 	<+>
-	(PluggableListMorph model: model listGetter: #incoming indexGetter: nil indexSetter: nil :: ph:1 ; pw:0.25)
+	(PluggableJsonMorph new model: model ; objectGetter: #slots ; yourself :: ph:1 ;pw:(1/3))
 	<+>
-	(PluggableJsonMorph new model: model ; objectGetter: #slots ; yourself :: ph:1 ;pw:0.25)
-	<+>
-	(PluggableListMorph model: model listGetter: #outgoing indexGetter: nil indexSetter: nil :: ph: 1 ; pw:0.25) ph:0.3
+	(PluggableListMorph model: model listGetter: #incoming indexGetter: nil indexSetter: nil :: ph:1 ; pw:(1/3)) ph:0.3
 )
 </>
 (TextModelMorph textProvider: model textGetter: #description textSetter:#description: :: pw:1.0 ; ph:0.7).
@@ -318,6 +337,13 @@ self setLabel:'Archivist Browser'.
 cloneSelectedObject
 
 	model cloneSelectedObject.
+	
+	! !
+
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:28:55'!
+deleteSelectedObject
+
+	model deleteSelectedObject.
 	
 	! !
 
@@ -358,7 +384,7 @@ openCommitDialog
 
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:03:42'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:27:41'!
 residentObjectsMenu
 
 	| aMenu |
@@ -388,6 +414,11 @@ residentObjectsMenu
 			#label 			-> 			'fetch'.
 			#selector 		-> 			#fetchObject.
 			#balloonText 	-> 			'Replace the selected stub with the actual object.'
+		} asDictionary.
+		{
+			#label 			-> 			'delete'.
+			#selector 		-> 			#deleteSelectedObject.
+			#balloonText 	-> 			'Remove any links adjacent on the selected object and evict it from the cache.'
 		} asDictionary.
 
 	}`.
@@ -477,11 +508,13 @@ contents
 		
 	^Array new! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:50:22'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:37:35'!
 checkin: comment 
 
 	| changes aWriteStream statement result base |
 
+	self halt.
+	
 	changes := OrderedCollection new.
 	
 	fresh do:[:each | each addChangesTo: changes].
@@ -550,6 +583,18 @@ deferredFetch: oid
 		vobj := VersionedObjectStub new oid: oid ; cache: self ; yourself. 
 		vobjects at: oid put: vobj. vobj		]. ! !
 
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:33:29'!
+delete: vobj
+
+	fresh at: vobj oid ifPresent:[ :p | p disconnect . fresh removeKey: p oid . ^ self ].
+	
+	self assert: (vobjects includesKey: vobj oid).
+	
+	vobjects at: vobj oid :: disconnect.
+	
+	vobjects removeKey: vobj oid.
+	! !
+
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 20:23:14'!
 evict: oid
 
@@ -609,14 +654,16 @@ fetchLinks: oid
 fresh
 	^fresh  ! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:24:37'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 10:13:00'!
 initialize
 
 	vobjects := Dictionary new.
 	
 	next := -1. "the first object identifier for new objects."
 	
-	fresh := Dictionary new. "collection of newly create vobjects"! !
+	fresh := Dictionary new. "collection of newly create vobjects"
+	
+	toDelete := Set new. "objects to delete in next checkin"! !
 
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 08:25:31'!
 lookup: aString
@@ -702,6 +749,10 @@ dirty
 
 	self subclassResponsibility! !
 
+!VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 10:16:09'!
+disconnect
+	self subclassResponsibility ! !
+
 !VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 2/26/2024 20:58:01'!
 isObject
 	^self subclassResponsibility ! !
@@ -767,9 +818,9 @@ asJSON
 
 ^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid ifNil:[0] . (Json render: content)  . description jsonPrint . aWriteStream contents }! !
 
-!VersionedObject methodsFor: 'initialization' stamp: 'DF 3/2/2024 21:17:22'!
+!VersionedObject methodsFor: 'initialization' stamp: 'DF 3/7/2024 11:54:34'!
 initialize
-	in := Set new.
+	in := Dictionary new.
 	out := Dictionary new.
 	content := JsonObject new.
 	description := ''! !
@@ -855,7 +906,7 @@ linkAt: aString put: aVersionedEntity
 outgoing
 	^out ! !
 
-!VersionedObject methodsFor: 'copying' stamp: 'DF 3/1/2024 14:01:45'!
+!VersionedObject methodsFor: 'copying' stamp: 'DF 3/7/2024 13:36:50'!
 clone: newoid
 
 	| vobj c p |
@@ -867,12 +918,12 @@ clone: newoid
 	c := JsonObject new.
 	p := self.
 	
-	[p notNil] whileTrue:[ | t |
+	[p notNil] whileTrue:[ 
 		
-		t := JsonObject new.
-		t := t , p content.
-		c := t, c.
+		c := JsonObject new , p content , c.
 
+		p outgoing keys do:[:each | vobj linkAt: each put: nil ].
+		
 		p := p linkAt: 'parent' ifAbsent:[nil] ]. 
 	
 	vobj content: c.
@@ -881,12 +932,27 @@ clone: newoid
 	
 	^vobj! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 12:54:39'!
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:55:15'!
 addIncoming: aVersionedObject
 
 	self assert: aVersionedObject notNil.
 	
-	in add: aVersionedObject! !
+	in at: aVersionedObject oid put: aVersionedObject! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:17:21'!
+disconnect
+	
+	" first make them dirty, this will force any stubs to be replaced by their actual objects. "
+	
+	out do:[:each | each dirty: true.  ].
+	
+	out do:[:each | each removeIncoming: self].
+	
+	in do:[:each | each dirty: true. ].
+	
+	in do:[:each | each nullifyOutgoing: self.  ].
+	
+! !
 
 !VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 2/25/2024 22:05:17'!
 fix: base
@@ -896,9 +962,22 @@ fix: base
 	oid := oid * -1 + base
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 12:56:10'!
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:14:37'!
+nullifyOutgoing: aVersionedEntity
+
+	self halt.
+	out := out collect:[:each | each notNil and:[each oid = aVersionedEntity oid] :: ifTrue:[nil] ifFalse:[each] ]
+! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:54:29'!
 removeIncoming: aVersionedObject
-	in remove: aVersionedObject! !
+
+	in removeKey: aVersionedObject oid! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:05:23'!
+removeOutgoing: aVersionedEntity
+
+	out := out reject:[:each | each ifNil:[false] ifNotNil:[ each oid = aVersionedEntity oid] ]! !
 
 !VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:20:21'!
 replace: aStubObject with: aVersionedObject
