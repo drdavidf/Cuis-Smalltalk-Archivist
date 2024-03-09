@@ -62,3 +62,8 @@ call new_changeset('Bob adds links',
 	{"oid":2,"description":"The color of sky", "slots":{"color":"light blue"},"links":[{"target":3, "name":"u"}]}
 ]', NULL);
 
+call new_changeset('add a new object', 
+'[
+	{"oid":-1,"description":"A new object", "slots":{"weight":80},"links":[{"target":3, "name":"x"}]}
+]', NULL);
+
