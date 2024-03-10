@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 10 March 2024 at 12:06:42 am'!
+'From Cuis6.3 [latest update: #6253] on 10 March 2024 at 11:33:06 pm'!
 'Description '!
-!provides: 'Archivist' 1 100!
+!provides: 'Archivist' 1 108!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -57,24 +57,14 @@ SystemWindow subclass: #ArchivistCacheWindow
 ArchivistCacheWindow class
 	instanceVariableNames: ''!
 
-!classDefinition: #PluggableJsonMorph category: #Archivist!
-PluggableMorph subclass: #PluggableJsonMorph
-	instanceVariableNames: 'mold objectGetter scrollPane button'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'Archivist'!
-!classDefinition: 'PluggableJsonMorph class' category: #Archivist!
-PluggableJsonMorph class
-	instanceVariableNames: ''!
-
-!classDefinition: #JsonListItemWrapper category: #Archivist!
-ListItemWrapper subclass: #JsonListItemWrapper
+!classDefinition: #ArchiDiff category: #Archivist!
+Object subclass: #ArchiDiff
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Archivist'!
-!classDefinition: 'JsonListItemWrapper class' category: #Archivist!
-JsonListItemWrapper class
+!classDefinition: 'ArchiDiff class' category: #Archivist!
+ArchiDiff class
 	instanceVariableNames: ''!
 
 !classDefinition: #ArchiLink category: #Archivist!
@@ -95,16 +85,6 @@ Object subclass: #ArchivistCache
 	category: 'Archivist'!
 !classDefinition: 'ArchivistCache class' category: #Archivist!
 ArchivistCache class
-	instanceVariableNames: ''!
-
-!classDefinition: #JsonObjectModel category: #Archivist!
-Object subclass: #JsonObjectModel
-	instanceVariableNames: 'jobj'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'Archivist'!
-!classDefinition: 'JsonObjectModel class' category: #Archivist!
-JsonObjectModel class
 	instanceVariableNames: ''!
 
 !classDefinition: #KeyHolder category: #Archivist!
@@ -175,16 +155,6 @@ Field subclass: #LinkField
 	category: 'Archivist'!
 !classDefinition: 'LinkField class' category: #Archivist!
 LinkField class
-	instanceVariableNames: ''!
-
-!classDefinition: #ChoiceField category: #Archivist!
-SelectField subclass: #ChoiceField
-	instanceVariableNames: 'key obj'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'Archivist'!
-!classDefinition: 'ChoiceField class' category: #Archivist!
-ChoiceField class
 	instanceVariableNames: ''!
 
 
@@ -320,7 +290,7 @@ description
 
 	^selection description! !
 
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 22:07:45'!
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 18:16:34'!
 description: aString
 
 	selection ifNil:[^false].
@@ -329,7 +299,7 @@ description: aString
 
 	selection description: aString.
 	
-	self changed: #oidDisplayList ; changed: #cacheState
+	self changed: #oidDisplayList ; changed: #cacheState.
 	
 	^true
 ! !
@@ -576,9 +546,41 @@ openResolveDialog
 	mold openDialog: 'Resolve object identifier'.
 ! !
 
-!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 00:05:55'!
+!ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/10/2024 19:49:30'!
+revertSelectedObject
+
+	selection ifNil:[^self].
+	
+	selection isRealized ifFalse:[^self].
+	
+	cache refresh: selection oid.
+	
+	self changed.! !
+
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:16:47'!
 addFieldOn: anObject at: aKey to: aMold
-	^aMold fields add: (ChoiceField new on: aKey of: anObject )! !
+	^aMold stringField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:26:41'!
+dst
+	^self! !
+
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:25:26'!
+oid
+	^self! !
+
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:18:34'!
+printOn: aStream
+
+	self at:1 :: printOn: aStream.
+	
+	aStream nextPutAll: ' | ' .
+	
+	self at: 2 :: printOn: aStream.! !
+
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:27:37'!
+removeIncoming: aVersionedObject 
+	! !
 
 !ArchiLinkMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 13:18:17'!
 backgroundColor: aColor
@@ -752,7 +754,7 @@ openCommitDialog
 
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 21:49:08'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 19:51:05'!
 residentObjectsMenu
 
 	| aMenu |
@@ -794,6 +796,12 @@ residentObjectsMenu
 			#balloonText 	-> 			'Replace the selected stub with the actual object.'
 		} asDictionary.
 		{
+			#label 			-> 			'revert'.
+			#object -> model.
+			#selector 		-> 			#revertSelectedObject.
+			#balloonText 	-> 			'Cancel any changes done to the object.'
+		} asDictionary.
+		{
 			#label 			-> 			'delete'.
 			#object -> model.
 			#selector 		-> 			#deleteSelectedObject.
@@ -803,107 +811,38 @@ residentObjectsMenu
 	}.
 	^aMenu! !
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 18:52:42'!
-getMenu
+!ArchiDiff class methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:28:27'!
+attributesFor: condition 
+	condition == #unchanged
+		ifTrue: [ 
+			^ {TextEmphasis normal} ].
+	condition == #removed
+		ifTrue: [ 
+			^ { TextColor color: (Color red). } ].
+	condition == #inserted
+		ifTrue: [ 
+			^ {TextColor color: (Color green)} ]! !
 
-	| aMenu |
-	
-	aMenu := MenuMorph new defaultTarget: self.
-	
-	aMenu addTitle: 'Object slots'.
-	aMenu addItemsFromDictionaries: `{
-		{
-			#label 			-> 			'add slot ...'.
-			#selector 		-> 			#addSlotDialog .
-			#balloonText 	-> 			'Add a new slot to the object.'
-		} asDictionary.
+!ArchiDiff class methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:32:14'!
+between: aString and: anotherString
 
-	}`.
-	^aMenu! !
+	| finder aWriteStream diff |
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:05:08'!
-initialize
+	finder := DifferenceFinder 	base: aString case: anotherString.
 
-	| widget |
-	
-	super initialize.
-	
-	scrollPane := PluggableScrollPane new. 
- 
-	button := PluggableButtonMorph model: self action: #save label: 'Save'.
-		
-	widget := (scrollPane pw:1 ; ph:1) </> (button align: #rightOrBottom).
-	
-	self addMorph: widget.! !
+	finder compareLines; compute.
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/4/2024 21:53:29'!
-layoutBounds
-	"Return the bounds for laying out children of the receiver"
-	"Exclude the label area"
+	aWriteStream := WriteStream on: '' asText.
 
-	^ 0@0 extent: self morphExtentInOwner! !
+	diff := finder differences anyOne.
 
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 10:30:48'!
-layoutSubmorphs
+	diff do: [:item :condition | | attributes |
+		attributes := self attributesFor: condition.
+		aWriteStream withAttributes: attributes do: [
+			aWriteStream nextPutAll: item asString]		].
 
-	| myBounds |
-	
-	myBounds := self layoutBounds.
-	
-	submorphs do:[:each | each
-		morphPosition: myBounds origin;
-		morphExtent: myBounds extent ]
+	^aWriteStream contents   
 ! !
-
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/4/2024 20:03:53'!
-objectGetter: aSymbol
-	objectGetter := aSymbol! !
-
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:15:05'!
-save
-
-	mold validate.
-	
-	mold isValid ifTrue: [mold save. model updateSlots ].! !
-
-!PluggableJsonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:45:45'!
-update: aSymbol
-
-	| obj form |
-	
-	mold := Mold new.
-	
-	obj := 	model perform: objectGetter.
-	
-	obj keysAndValuesDo: [:key :value | ( value class addFieldOn:obj at:key to: mold ) label: key ; customize:[:w :i :e | i borderColor: Color veryLightGray ] ].
-	
-	form := obj isEmpty ifTrue:[LabelGroup new] ifFalse:[mold renderForms].
-	
-	form morphExtent: scrollPane viewableWidth @ form morphHeight.
-	
-	scrollPane scroller: form.! !
-
-!JsonListItemWrapper methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 22:59:47'!
-asString
-
-	item value isKindOf: JsonObject :: ifTrue:[^item key].
-
-	item value isKindOf: Array :: ifTrue:[^item key ].
-
-	^item key asString , ': ', item value asString! !
-
-!JsonListItemWrapper methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:02:55'!
-contents
-
-	| p |
-	
-	p := item value.
-	
-	p isKindOf: JsonObject :: ifTrue:[^p associations collect:[:each | JsonListItemWrapper with: each] ].
-
-	p isKindOf: Array :: ifTrue:[^p withIndexCollect:[:each :i | JsonListItemWrapper with: i -> each] ].
-		
-	^Array new! !
 
 !ArchiLink methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 11:29:06'!
 addFieldOn: anObject at: aKey to: aMold
@@ -987,6 +926,21 @@ spCheckoutLinks: oid
 	] on: Error do:[:ex | ex signal] ensure:[ 	statement close].
 
 	^result recordsAsDictionaries
+! !
+
+!ArchivistCache methodsFor: 'postgres calls' stamp: 'DF 3/10/2024 23:03:16'!
+spCheckoutLinks: oid version: rid
+
+	| statement result |
+	
+	[
+		statement := connection prepare: 'SELECT * FROM checkout_links_version($1,$2)'.
+
+		result := statement executeQuery: (Array with: oid with:rid).
+	
+	] on: Error do:[:ex | ex signal ] ensure:[	statement close ].
+	
+	^ result recordsAsDictionaries.
 ! !
 
 !ArchivistCache methodsFor: 'postgres calls' stamp: 'DF 3/9/2024 22:50:07'!
@@ -1208,11 +1162,20 @@ fetchLinks: oid
 		
 	! !
 
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:06:29'!
+fetchOutgoingLinks: oid version: rid
+
+	self assert: oid notNil.
+			
+	^self spCheckoutLinks: oid version: rid :: collect:[:each | 
+		 (each at:#name) -> (self deferredFetch: (each at:#oidtarget)) ] ::asDictionary
+	! !
+
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/26/2024 18:58:59'!
 fresh
 	^fresh  ! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 00:04:18'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:01:20'!
 mergeLatestChanges
 	
 	| oids |
@@ -1228,7 +1191,11 @@ mergeLatestChanges
 			vobj dirty 
 				ifTrue:[ | pred succ |
 					pred := self fetch: each revision: vobj rid. 
+					pred outgoing: (self fetchOutgoingLinks: pred oid version: pred rid).
+					
 					succ := self fetch: each.
+					succ outgoing: (self fetchOutgoingLinks: succ oid version: succ rid).
+
 					vobj merge: pred latest: succ. 
 					]
 				ifFalse:[ self refresh: each ] ] ].
@@ -1278,16 +1245,6 @@ resolve: oid
 		
 		vobject]
 	! !
-
-!JsonObjectModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 22:45:23'!
-getList
-	^jobj associations collect:[: each | JsonListItemWrapper with: each ]
-	! !
-
-!JsonObjectModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 22:28:34'!
-jobj: aJsonObject
-
-	jobj := aJsonObject! !
 
 !KeyHolder methodsFor: 'as yet unclassified' stamp: 'DF 3/5/2024 09:56:56'!
 dictionary: aDictionary
@@ -1471,6 +1428,11 @@ linkAt: aString put: aVersionedEntity
 outgoing
 	^out ! !
 
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/10/2024 23:00:01'!
+outgoing: aDictionary
+	out := aDictionary 
+	! !
+
 !VersionedObject methodsFor: 'accessing' stamp: 'DF 3/9/2024 23:32:04'!
 removeSlotAt: aString
 	slots removeKey: aString! !
@@ -1550,14 +1512,31 @@ linkName: anInteger
 	^out associations detect:[:each | each value notNil and:[each value oid = anInteger ] ] ifFound:[:each | each key ] ifNone:[''].
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 00:05:11'!
-merge: pred latest: succ.
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:32:20'!
+merge: pred latest: succ
+
+	|  predkeys keys succkeys |
 
 	self halt.
 	
 	slots := slots merge: succ slots old: pred slots.
 	
-	description := DifferenceFinder displayPatchFrom: description to: succ description tryWords: false.
+	description := ArchiDiff between: description and: succ description.
+	
+	keys := out collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
+	
+	predkeys := pred outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
+	
+	succkeys := succ outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
+
+	keys := keys merge: succkeys old: predkeys.
+	
+	out do:[:each | each ifNotNil:[each removeIncoming: self] ].
+	
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifFalse:[ self linkAt: each key put: each value ]  ].
+	
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]  ].
+		
 	
 	! !
 
@@ -1748,20 +1727,6 @@ validateConditions
 	input ifNil: [ ^ self ].
 	(self disinfect: input) isInteger ifFalse: [ errors add: 'Only integers are allowed here.' ]! !
 
-!ChoiceField methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:24:51'!
-on: aSymbol of: model
-
-	key := aSymbol.
-	
-	obj := model.
-	
-	^super on: #listIndex of: (ListModel with: (model at: key))! !
-
-!ChoiceField methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 13:22:08'!
-save
-	
-	obj at: key put: listModel selectedItem.! !
-
 !Boolean methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:26:43'!
 addFieldOn: anObject at: aKey to: aMold
 	^aMold checkboxField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
@@ -1807,29 +1772,30 @@ jsonPrint
 	^self string jsonPrint
 	! !
 
-!JsonObject methodsFor: '*Archivist' stamp: 'DF 3/6/2024 13:32:29'!
-merge: newJsonObject old: oldJsonObject
+!Dictionary methodsFor: '*Archivist' stamp: 'DF 3/10/2024 23:12:41'!
+merge: newDictionary old: oldDictionary
 
 	| keys result |
 	
-	result := OrderedCollection new.
+	result := self class new.
 	
-	keys := Set new , oldJsonObject keys , self keys, newJsonObject keys.
+	keys := Set new , oldDictionary keys , self keys, newDictionary keys.
 	
 	keys do:[:each | 
 		
-		(self includesKey: each) and:[newJsonObject includesKey:each] :: 
-			ifTrue: [	result add: each -> (Set with: (self at:each)  with: (newJsonObject at:each)) ].
+		(self includesKey: each) and:[newDictionary includesKey:each] :: 
+			ifTrue: [	result at: each put:(Set with: (self at:each)  with: (newDictionary at:each)) ].
 
-		(self includesKey: each) and:[(newJsonObject includesKey:each) not] :: 
+		(self includesKey: each) and:[(newDictionary includesKey:each) not] :: 
 			ifTrue: [
-				(oldJsonObject includesKey: each) not or:[ (oldJsonObject at: each) ~= (self at:each)] ::
-					ifTrue:[ result add: each -> (Set with: (self at:each)) ] ].
-		(self includesKey: each) not and:[(newJsonObject includesKey:each) ] :: 
-			ifTrue: [ result add: each -> (Set with: (newJsonObject at:each)) ] ].
+				(oldDictionary includesKey: each) not or:[ (oldDictionary at: each) ~= (self at:each)] ::
+					ifTrue:[ result at: each put: (Set with: (self at:each)) ] ].
+		(self includesKey: each) not and:[(newDictionary includesKey:each) ] :: 
+			ifTrue: [ result at: each put:(Set with: (newDictionary at:each)) ] ].
 		
-	^ JsonObject fromAssociations: (result collect:[:each | | v | 
-		v := each value size = 1 ifTrue:[each value anyOne] ifFalse:[NonDeterministicChoice new addAll: each value ; yourself]. 		each key -> v ])
+	^result collect:[:each | 
+		each size = 1 
+			ifTrue:[each anyOne] ifFalse:[NonDeterministicChoice new addAll: each ; yourself] ]
 			
 ! !
 
