@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 10 March 2024 at 11:33:06 pm'!
+'From Cuis6.3 [latest update: #6253] on 11 March 2024 at 9:28:25 am'!
 'Description '!
-!provides: 'Archivist' 1 108!
+!provides: 'Archivist' 1 111!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -557,9 +557,11 @@ revertSelectedObject
 	
 	self changed.! !
 
-!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:16:47'!
+!NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:25:27'!
 addFieldOn: anObject at: aKey to: aMold
-	^aMold stringField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+	^aMold stringField on: #valueAtKey of:(KeyHolder on: anObject at: aKey) ; 
+		addCondition: [:input | input isKindOf: NonDeterministicChoice :: not ] ! !
 
 !NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:26:41'!
 dst
@@ -681,7 +683,7 @@ save
 	
 	mold isValid ifTrue: [ mold save. model updateSlots ].! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 11:22:50'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:24:28'!
 update: aSymbol
 
 	| obj form |
@@ -844,7 +846,7 @@ between: aString and: anotherString
 	^aWriteStream contents   
 ! !
 
-!ArchiLink methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 11:29:06'!
+!ArchiLink methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:27:27'!
 addFieldOn: anObject at: aKey to: aMold
 
 	| aLinkField |
@@ -852,6 +854,10 @@ addFieldOn: anObject at: aKey to: aMold
 	aLinkField := LinkField new on: aKey of: anObject ; yourself.
 	
 	aLinkField inputMorph model: anObject ; navigator: model.
+	
+	aLinkField addCondition: [:input | input isKindOf: NonDeterministicChoice :: not ] .
+	
+	aLinkField validateInput.
 	
 	^aMold fields add: aLinkField! !
 
@@ -1175,13 +1181,11 @@ fetchOutgoingLinks: oid version: rid
 fresh
 	^fresh  ! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:01:20'!
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 08:34:45'!
 mergeLatestChanges
 	
 	| oids |
 		
-	self halt.
-	
 	oids := Set new.
 	
 	self spObjectsModifiedSince: expires :: do:[:each | oids add: each first ].
@@ -1512,12 +1516,10 @@ linkName: anInteger
 	^out associations detect:[:each | each value notNil and:[each value oid = anInteger ] ] ifFound:[:each | each key ] ifNone:[''].
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:32:20'!
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:12:35'!
 merge: pred latest: succ
 
-	|  predkeys keys succkeys |
-
-	self halt.
+	|  predkeys keys succkeys objs |
 	
 	slots := slots merge: succ slots old: pred slots.
 	
@@ -1531,11 +1533,26 @@ merge: pred latest: succ
 
 	keys := keys merge: succkeys old: predkeys.
 	
+	"keys now holds the map that associates the link names to their oids. We need a map that associates the link
+	names to their vobjects. We can build it by noticing that each name in keys is mapped either to
+	an object in current or to an object in pred or to an object in succ".
+	
+	objs := Dictionary new.
+	
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: 
+		ifFalse:[ 
+			{ pred . self . succ } do: [:p | p outgoing at: each key ifPresent:[:v | v oid = each value ifTrue:[objs at: each key put: v ] ] ] ] ].
+	
+	" disconnect self from the vobjs it is currently pointing to "
+	
 	out do:[:each | each ifNotNil:[each removeIncoming: self] ].
 	
-	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifFalse:[ self linkAt: each key put: each value ]  ].
+	out := Dictionary new. "clear out, we will rebuild it from keys and objs in the next two statements"
 	
-	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]  ].
+	objs associations do:[ :each |self linkAt: each key put: each value   ].
+
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]   ]. "keep non deterministic choice as it is"
+	
 		
 	
 	! !
