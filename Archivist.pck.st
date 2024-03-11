@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 11 March 2024 at 9:28:25 am'!
+'From Cuis6.3 [latest update: #6253] on 11 March 2024 at 10:41:42 pm'!
 'Description '!
-!provides: 'Archivist' 1 111!
+!provides: 'Archivist' 1 123!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -55,6 +55,16 @@ SystemWindow subclass: #ArchivistCacheWindow
 	category: 'Archivist'!
 !classDefinition: 'ArchivistCacheWindow class' category: #Archivist!
 ArchivistCacheWindow class
+	instanceVariableNames: ''!
+
+!classDefinition: #TestArchiCache category: #Archivist!
+TestCase subclass: #TestArchiCache
+	instanceVariableNames: 'client cache'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist'!
+!classDefinition: 'TestArchiCache class' category: #Archivist!
+TestArchiCache class
 	instanceVariableNames: ''!
 
 !classDefinition: #ArchiDiff category: #Archivist!
@@ -676,12 +686,15 @@ getMenu
 objectGetter: aSymbol
 	objectGetter := aSymbol! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:44:46'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 19:07:39'!
 save
 
 	mold validate.
 	
-	mold isValid ifTrue: [ mold save. model updateSlots ].! !
+	mold isValid ifTrue: [ 
+		mold save .  
+		mold fields allSatisfy:# isValid :: "could be false if something goes wrong during the save (e.g. with access to database) "
+			ifTrue: [		model updateSlots ] ].! !
 
 !MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:24:28'!
 update: aSymbol
@@ -812,6 +825,107 @@ residentObjectsMenu
 
 	}.
 	^aMenu! !
+
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 21:54:40'!
+setUp
+
+	| settings statement |
+	
+	settings :=  IdentityDictionary new.
+	settings at: #host put: 'localhost' "#[127 0 0 1 ].".
+	settings at: #port put: 5432.
+	settings at: #database put: 'architest'.
+	settings at: #user put: 'postgres'.
+	settings at: #timeout put: 30.
+	settings at: #password put: '2358'.
+
+	client := PgClient newFrom: settings.
+	client connect.
+	
+	client executeQuery: 'CALL initialize();'. "clear all content from the database"
+
+	[		
+		statement := client prepare: 'CALL new_changeset($1, $2, $3)'.
+
+		statement executeQuery: { 'init test' .  '[{"oid":-1,"slots":{}, "description":"", "links":[]}]' . 0 }.
+	
+	]  ensure:[ 	statement close ].
+
+	cache := ArchivistCache new.
+	
+	cache connection: client.
+	
+	
+ ! !
+
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 21:45:54'!
+tearDown
+
+	client close! !
+
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 22:32:22'!
+testClone
+
+	| root |
+	
+	root := cache resolve:1.
+	
+	self assert: root oid = 1.
+	
+	root 
+		at: #n put: 123; 
+		at: #f put: -28.5792;
+		at: #b put: false ;
+		at: #s put: 'Hello, world' ;
+		at: #c put: DateAndTime now ;
+		at: #d put: Date today ;
+		at: #t put: Time now.
+	
+	9 timesRepeat: [ cache clone: root ].
+	
+	-9 to: -1 do:[:i | | obj | 
+		obj := cache resolve: i .
+		
+		self assert: obj oid = i ].
+	
+	cache checkin: 'testClone'.
+	
+	1 to: 10 do:[:i | | obj |
+		obj := cache resolve:i.
+		
+		self assert: obj oid = i. 
+		
+		self assert: obj slots equals: root slots ].
+	
+	! !
+
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 22:40:22'!
+testLinks
+
+	| root obj1 obj2 objx objy |
+	
+	root := cache resolve:1.
+	
+	obj1 := cache clone: root.
+	
+	obj2 := cache clone: root.
+	
+	obj1 linkAt: #p put: obj2.
+	
+	cache checkin: 'testLinks'.
+	
+	cache := ArchivistCache new.
+	
+	cache connection: client.
+	
+	root := cache resolve:1.
+	
+	objx := cache resolve:2.
+	
+	objy := cache resolve:3.
+	
+	self assert: (objx linkAt: #p) equals: objy.
+	! !
 
 !ArchiDiff class methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 22:28:27'!
 attributesFor: condition 
@@ -1024,6 +1138,10 @@ initialize
 	
 	expires := DateAndTime now. "initialy the cache is up to date until the moment it was created" ! !
 
+!ArchivistCache methodsFor: 'accessing' stamp: 'DF 2/19/2024 19:56:58'!
+connection: aPgConnection
+	connection := aPgConnection! !
+
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 22:47:09'!
 checkin: comment 
 
@@ -1071,10 +1189,6 @@ clone: aVersionedObject
 	objects that we fetch from the database. "
 	
 	^ vobj ! !
-
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 2/19/2024 19:56:58'!
-connection: aPgConnection
-	connection := aPgConnection! !
 
 !ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 20:43:34'!
 deferredFetch: oid
@@ -1730,12 +1844,27 @@ inputMorphInstance
 navigator: anArchivistCacheModel
 	navigator := anArchivistCacheModel ! !
 
-!LinkField methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:59:55'!
+!LinkField methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 19:04:51'!
 on: aSymbol of: anObject
 
+	| v | 
+	
 	model := anObject.
 	
-	^super on: #value of: (anObject at: aSymbol)! !
+	v := (anObject at: aSymbol).
+	
+	self value: v.
+	self inputMorphContents: input.
+	
+	self callback: [:val | [ v perform: #value: with: val ] 
+		on: Error do:[:ex | 
+			errors := OrderedCollection with: ex messageText.
+			self errorsColumn removeAllMorphs.
+			self errorsColumn 
+				addMorph: (LabelMorph contents: '• ', ex messageText :: color: Color red)		
+				layoutSpec: (LayoutSpec keepMorphExtent offAxisEdgeWeight: 0)			.
+			self  highlightInputMorph 			] ].
+	! !
 
 !LinkField methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:55:41'!
 validateConditions
@@ -1756,13 +1885,43 @@ addFieldOn: anObject at: aKey to: aMold
 addFieldOn: anObject at: aKey to: aMold
 	^aMold integerField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
 
+!DateAndTime methodsFor: '*Archivist' stamp: 'DF 3/11/2024 22:31:17'!
+jsonWriteOn: aStream
+
+	aStream nextPut:$".
+
+	self printOn: aStream .
+	
+	aStream nextPut:$".
+! !
+
 !Time methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:27:34'!
 addFieldOn: anObject at: aKey to: aMold
 	^aMold timeField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
 
+!Time methodsFor: '*Archivist' stamp: 'DF 3/11/2024 22:31:06'!
+jsonWriteOn: aStream
+
+	aStream nextPut:$".
+
+	self print24: true on: aStream .
+	
+	aStream nextPut:$".
+! !
+
 !Date methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:27:28'!
 addFieldOn: anObject at: aKey to: aMold
 	^aMold dateField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Date methodsFor: '*Archivist' stamp: 'DF 3/11/2024 22:30:54'!
+jsonWriteOn: aStream
+
+	aStream nextPut:$".
+	
+	self printOn: aStream format: #(3 2 1 $- 1 1 2).
+	
+	aStream nextPut:$".
+! !
 
 !CharacterSequence methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:27:11'!
 addFieldOn: anObject at: aKey to: aMold
