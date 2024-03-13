@@ -68,7 +68,6 @@ call new_changeset('Bob adds links',
 	{"oid":2,"description":"The color of sky", "slots":{"color":"light blue"},"links":[{"target":3, "name":"u"}]}
 ]', NULL);
 
-
 /* add a new object , link it to objects 3 and 1 */
 
 

@@ -1,0 +1,21 @@
+How to support reviews 
+
+Requirements, arguments and counter arguments are all subject to review. A review is a map that associates ranges of text
+in the reviewed document with (review) text. As it is often the case that the authors will want to reply to the comments
+we may improve the model by mapping ranges of text to discussions. A discussion is a sequence of text messages that contain in 
+addition to the comment, the author of the comment and the date on which it was created. 
+
+We may represent reviews as XML documents. 
+
+Another option is to represent all documents with XML and then a review could be added to the document itself. For example
+
+<p>Requirements, arguments and counter arguments are all subject to review. A review is a map that associates ranges of text
+in the reviewed document with (review) text. As it is often the case that the authors will want to reply to the comments
+we may improve the model by mapping ranges of text to discussions. A discussion is a sequence of text messages that contain in 
+addition to the comment, 
+<review>
+<text>the author of the comment</text>
+<discussion>
+<comment author="Alice" date="10/3/24">suggestion: the comment's author (more concise)</comment>
+<comment author="Bob" date="12/3/24">yes, that's a good idea.</comment>
+</discussion> and the date on which it was created.</p>

@@ -157,7 +157,13 @@ END; $$
 CREATE OR REPLACE FUNCTION checkout_vobject(_oid integer) RETURNS SETOF revision
 AS $$
 SELECT revision.* FROM revision JOIN vobject ON revision.oid = vobject.oid AND vobject.head = revision.rid WHERE revision.oid = _oid; 
+$$ LANGUAGE SQL ;
 
+/* answer a specific revision of a versioned object */
+
+CREATE OR REPLACE FUNCTION checkout_vobject_version(_oid integer, _rid integer) RETURNS SETOF revision
+AS $$
+SELECT * FROM revision WHERE oid = _oid AND rid = _rid; 
 $$ LANGUAGE SQL ;
 
 /* answer the latest revision of the links of a versioned object (without resolving the links) */
@@ -167,6 +173,22 @@ AS $$
 
 SELECT link.* FROM link JOIN vobject ON vobject.oid = link.oid AND link.rid = vobject.head WHERE link.oid = _oid OR link.oidtarget = _oid;
 
+$$ LANGUAGE SQL ;
+
+/* answer a specific revision of the links of a versioned object (without resolving the links) */
+
+CREATE OR REPLACE FUNCTION checkout_links_version(_oid integer, _rid integer) RETURNS SETOF link
+AS $$
+
+SELECT * FROM link WHERE oid = _oid AND rid = _rid;
+
+$$ LANGUAGE SQL ;
+
+/* answer all the oids of objects that were modified after a certain timestamp */
+
+CREATE OR REPLACE FUNCTION objects_modified_since(_t timestamp) RETURNS TABLE(oid int) 
+AS $$
+SELECT DISTINCT revision.oid FROM revision JOIN changeset ON revision.cid = changeset.cid where time > _t ;
 $$ LANGUAGE SQL ;
 
 CREATE OR REPLACE PROCEDURE initialize()
