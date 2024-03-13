@@ -1,9 +1,15 @@
 /*
 
-A changeset is a sequence of changes. each change has three parts:
+A changeset has three parts:
+
+A comment
+
+A sequence of versioned object slots and links
+
+The content of a versioned object consists of:
 
 oid 			an integer
-description 	text
+description 		text
 slots 			a dictionary
 links 			a sequence of link changes
 
@@ -60,5 +66,15 @@ object 2 adds a link 'u' that points to obj 3.
 call new_changeset('Bob adds links', 
 '[
 	{"oid":2,"description":"The color of sky", "slots":{"color":"light blue"},"links":[{"target":3, "name":"u"}]}
+]', NULL);
+
+
+/* add a new object , link it to objects 3 and 1 */
+
+
+call new_changeset('Add object that will later be deleted', 
+'[
+	{"oid":-1,"description":"", "slots":{"color":"purple"}, "links":[{"target":3, "name":"t"}]},
+	{"oid":3,"description":"Sun sun sun here it comes", "slots":{"color":"yellow"},"links":[{"target":-1, "name":"v"}]}
 ]', NULL);
 
