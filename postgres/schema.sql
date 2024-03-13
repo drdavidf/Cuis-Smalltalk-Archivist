@@ -35,7 +35,7 @@ CREATE TABLE link (
 	oidtarget integer ,
 	name text ,
 
-	FOREIGN KEY (oidtarget) REFERENCES vobject(oid),
+	FOREIGN KEY (oidtarget) REFERENCES vobject(oid) DEFERRABLE INITIALLY DEFERRED ,
 
 	PRIMARY KEY (oid, rid, name),
 	UNIQUE (cid, oid, name)
