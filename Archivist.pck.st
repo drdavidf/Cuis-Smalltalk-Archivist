@@ -1,6 +1,6 @@
-'From Cuis6.0 [latest update: #6153] on 13 March 2024 at 12:55:56 pm'!
+'From Cuis6.0 [latest update: #6153] on 13 March 2024 at 5:04:48 pm'!
 'Description '!
-!provides: 'Archivist' 1 153!
+!provides: 'Archivist' 1 155!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -1711,24 +1711,67 @@ clean
 	dirty := false.
 	! !
 
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/13/2024 16:58:11'!
+fix: base
+
+	self assert: oid < 0.
+
+	"Every vobject that uses an index to reference self, should update its index 
+	from the negative to the positive oid. 	As the only place where this happens 
+	is incoming dictionary of vobjects, we can iterate over all the vobjects that
+	emanate (out) from self and relink them to self. 	"
+
+	oid := oid * -1 + base.
+	
+	out do:[:each | each relink: (oid - base) * -1 to: self].
+	
+	
+	! !
+
 !VersionedObject methodsFor: 'changes' stamp: 'DF 3/3/2024 20:34:44'!
 incrementRid
 	rid := rid + 1! !
 
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/9/2024 23:32:04'!
-at: aSymbol
-	^ slots at: aSymbol! !
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/11/2024 09:12:35'!
+merge: pred latest: succ
 
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/9/2024 23:32:04'!
-at: aSymbol put: anObject
+	|  predkeys keys succkeys objs |
+	
+	slots := slots merge: succ slots old: pred slots.
+	
+	description := ArchiDiff between: description and: succ description.
+	
+	keys := out collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
+	
+	predkeys := pred outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
+	
+	succkeys := succ outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
 
-	| result |
+	keys := keys merge: succkeys old: predkeys.
 	
-	result := slots at: aSymbol put: anObject.
+	"keys now holds the map that associates the link names to their oids. We need a map that associates the link
+	names to their vobjects. We can build it by noticing that each name in keys is mapped either to
+	an object in current or to an object in pred or to an object in succ".
 	
-	dirty := true.
+	objs := Dictionary new.
 	
-	^result! !
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: 
+		ifFalse:[ 
+			{ pred . self . succ } do: [:p | p outgoing at: each key ifPresent:[:v | v oid = each value ifTrue:[objs at: each key put: v ] ] ] ] ].
+	
+	" disconnect self from the vobjs it is currently pointing to "
+	
+	out do:[:each | each ifNotNil:[each removeIncoming: self] ].
+	
+	out := Dictionary new. "clear out, we will rebuild it from keys and objs in the next two statements"
+	
+	objs associations do:[ :each |self linkAt: each key put: each value   ].
+
+	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]   ]. "keep non deterministic choice as it is"
+	
+		
+	
+	! !
 
 !VersionedObject methodsFor: 'accessing' stamp: 'DF 3/1/2024 12:20:15'!
 description
@@ -1753,26 +1796,6 @@ dirty: aBoolean
 incoming
 	^in  ! !
 
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/29/2024 12:39:21'!
-linkAt: aString
-	^ out at: aString! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/29/2024 13:04:33'!
-linkAt: aString ifAbsent: aBlock
-	^ out at: aString ifAbsent: aBlock! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/8/2024 16:30:03'!
-linkAt: aString put: aVersionedEntity 
-
-	out at: aString ifPresent:[:old | old ifNotNil:[ old removeIncoming: self] ].
-	
-	out at: aString put: aVersionedEntity. 
-	
-	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
-	
-	dirty := true.
-	! !
-
 !VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:45'!
 oid
 	^oid! !
@@ -1789,21 +1812,6 @@ outgoing
 outgoing: aDictionary
 	out := aDictionary 
 	! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/13/2024 10:55:05'!
-relink: anInteger to: aVersionedObject
-
-	self assert: anInteger < 0.
-	
-	self assert: ((in at: anInteger) = aVersionedObject).
-	
-	in removeKey: anInteger.
-	
-	in at: aVersionedObject oid put: aVersionedObject.! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/9/2024 23:32:04'!
-removeSlotAt: aString
-	slots removeKey: aString! !
 
 !VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:53'!
 rid
@@ -1850,19 +1858,14 @@ clone: newoid
 	
 	^vobj! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:55:15'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 11:55:15'!
 addIncoming: aVersionedObject
 
 	self assert: aVersionedObject notNil.
 	
 	in at: aVersionedObject oid put: aVersionedObject! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:50:49'!
-details
-
-	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ; nextPutAll: ' rid: ' , rid asString ; nextPutAll: (dirty ifTrue:[' dirty'] ifFalse:[' clean']) ] ! !
-
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 22:44:19'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/12/2024 22:44:19'!
 disconnect
 			
 	out do:[:each | each removeIncoming: self].
@@ -1875,24 +1878,27 @@ disconnect
 	
 ! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 10:55:46'!
-fix: base
+!VersionedObject methodsFor: 'links' stamp: 'DF 2/29/2024 12:39:21'!
+linkAt: aString
+	^ out at: aString! !
 
-	self assert: oid < 0.
+!VersionedObject methodsFor: 'links' stamp: 'DF 2/29/2024 13:04:33'!
+linkAt: aString ifAbsent: aBlock
+	^ out at: aString ifAbsent: aBlock! !
 
-	"every vobject that uses an index to reference self should update its index from the negative to the positive oid
-	as the only place where this happens is incoming dictionary of vobjects we can iterave over all the vobjects that
-	emanate (out) from self and relink them to self. 
-	"
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 16:30:03'!
+linkAt: aString put: aVersionedEntity 
 
-	oid := oid * -1 + base.
+	out at: aString ifPresent:[:old | old ifNotNil:[ old removeIncoming: self] ].
 	
-	out do:[:each | each relink: (oid - base) * -1 to: self].
+	out at: aString put: aVersionedEntity. 
 	
+	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
 	
+	dirty := true.
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:48:13'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 15:48:13'!
 linkName: anInteger
 
 	"answer the name by which the receiver links to oid"
@@ -1900,76 +1906,41 @@ linkName: anInteger
 	^out associations detect:[:each | each value notNil and:[each value oid = anInteger ] ] ifFound:[:each | each key ] ifNone:[''].
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:12:35'!
-merge: pred latest: succ
-
-	|  predkeys keys succkeys objs |
-	
-	slots := slots merge: succ slots old: pred slots.
-	
-	description := ArchiDiff between: description and: succ description.
-	
-	keys := out collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
-	
-	predkeys := pred outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
-	
-	succkeys := succ outgoing collect:[:each | each ifNil:[nil] ifNotNil:[each oid ] ].
-
-	keys := keys merge: succkeys old: predkeys.
-	
-	"keys now holds the map that associates the link names to their oids. We need a map that associates the link
-	names to their vobjects. We can build it by noticing that each name in keys is mapped either to
-	an object in current or to an object in pred or to an object in succ".
-	
-	objs := Dictionary new.
-	
-	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: 
-		ifFalse:[ 
-			{ pred . self . succ } do: [:p | p outgoing at: each key ifPresent:[:v | v oid = each value ifTrue:[objs at: each key put: v ] ] ] ] ].
-	
-	" disconnect self from the vobjs it is currently pointing to "
-	
-	out do:[:each | each ifNotNil:[each removeIncoming: self] ].
-	
-	out := Dictionary new. "clear out, we will rebuild it from keys and objs in the next two statements"
-	
-	objs associations do:[ :each |self linkAt: each key put: each value   ].
-
-	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]   ]. "keep non deterministic choice as it is"
-	
-		
-	
-	! !
-
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 17:00:03'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 17:00:03'!
 nullifyOutgoing: aVersionedEntity
 
 	out := out collect:[:each | each notNil and:[each oid = aVersionedEntity oid] :: ifTrue:[nil] ifFalse:[each] ]
 ! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:50:58'!
-realize
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/13/2024 10:55:05'!
+relink: anInteger to: aVersionedObject
 
-	"do nothing. this method does not exist in the stub so calling it will force the stub to load the real object"! !
+	self assert: anInteger < 0.
+	
+	self assert: ((in at: anInteger) = aVersionedObject).
+	
+	in removeKey: anInteger.
+	
+	in at: aVersionedObject oid put: aVersionedObject.! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 21:07:58'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 21:07:58'!
 removeAllOutgoingLinks
 
 	out do:[:each | each ifNotNil:[ each removeIncoming: self ] ].
 	
 	out := Dictionary new.! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 11:54:29'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 11:54:29'!
 removeIncoming: aVersionedObject
 
 	in removeKey: aVersionedObject oid! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:05:23'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 12:05:23'!
 removeOutgoing: aVersionedEntity
 
 	out := out reject:[:each | each ifNil:[false] ifNotNil:[ each oid = aVersionedEntity oid] ]! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:20:21'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/2/2024 21:20:21'!
 replace: aStubObject with: aVersionedObject
 
 	| names origdirty |
@@ -1987,6 +1958,35 @@ replace: aStubObject with: aVersionedObject
 	
 	dirty := origdirty. 
 	! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:50:49'!
+details
+
+	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ; nextPutAll: ' rid: ' , rid asString ; nextPutAll: (dirty ifTrue:[' dirty'] ifFalse:[' clean']) ] ! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:50:58'!
+realize
+
+	"do nothing. this method does not exist in the stub so calling it will force the stub to load the real object"! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+at: aSymbol
+	^ slots at: aSymbol! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+at: aSymbol put: anObject
+
+	| result |
+	
+	result := slots at: aSymbol put: anObject.
+	
+	dirty := true.
+	
+	^result! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+removeSlotAt: aString
+	slots removeKey: aString! !
 
 !VersionedObject class methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:22:00'!
 from: aDictionary 
