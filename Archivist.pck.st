@@ -160,6 +160,161 @@ VersionedObjectStub class
 	instanceVariableNames: ''!
 
 
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:11:11'!
+cacheState
+
+	^'cache has {1} resident objects, {2} new objects, {3} modified objects. updated on {4} at {5}' format:{ cache old size . cache fresh size . cache dirtySize . cache expires date . cache expires time } ! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 22:05:50'!
+connectionStatus
+	
+	connection ifNil:[^'Uninitialized'].
+	
+	connection isConnected ifFalse:[^'Not connected'].
+
+	^'Session {1} connected as {2} to database {3} on host {4} at port {5}.' format:{ connection session. settings at:#user . settings at: #database .  settings at: #host . settings at: #port }.
+	
+	! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:29:53'!
+description
+
+	selection ifNil:[^''].
+	
+	selection isRealized :: ifFalse: [^''].
+
+	^selection description! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 18:16:34'!
+description: aString
+
+	selection ifNil:[^false].
+	
+	selection isRealized :: ifFalse: [^false].
+
+	selection description: aString.
+	
+	self changed: #oidDisplayList ; changed: #cacheState.
+	
+	^true
+! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/14/2024 21:51:17'!
+incoming
+
+	| pairs |
+	
+	selection ifNil:[^{}].
+	
+	pairs := selection incoming collect:[:each | each oid -> (each linkNameOf: selection oid)  ] :: asOrderedCollection sort:[:x : y | x key <= y key ].
+	
+	^ pairs collect:[:each | '{1} ({2})' format: { each value . each key } ].! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 16:34:04'!
+incomingSelectionIndex
+
+	^0! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 23:19:56'!
+incomingSelectionIndex: anInteger
+
+	| oids |
+	
+	oids := selection incoming collect:[:each | each oid ] :: asOrderedCollection sort:[:x : y | x <= y ].
+
+	self navigateTo: (oids at: anInteger).! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 19:41:51'!
+oidDisplayList
+	
+	| oids |
+	
+	oids := (cache old values , cache fresh values ) collect:[:each | 		| prefix | 
+		prefix := each dirty ifTrue:['*'] ifFalse:[''].
+		each oid -> (prefix, each oid asString) ].
+		
+	^ (oids sort: [:x :y | x key <= y key]) collect:[:each | each value ]! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:26:51'!
+oids
+	
+	| oids |
+	
+	oids := cache old keys , cache fresh keys.
+		
+	^oids sort! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:31:09'!
+outgoing
+	selection ifNil:[^Dictionary new].
+	
+	selection isRealized ifFalse:[^Dictionary new].
+
+	^selection outgoing collect:[:each | each value ifNil:[0] ifNotNil:[each oid] ].! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:04:41'!
+selectionDetails
+
+	selection ifNil:[^''].
+	
+	^selection details! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:18:46'!
+selectionIndex
+
+	| oids |
+	
+	selection ifNil:[^0].
+
+	oids := self oids.
+	
+	^ oids indexOf: selection oid! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 12:38:37'!
+selectionIndex: anInteger
+
+	| oids |
+	
+	anInteger = 0 ifFalse:[
+	
+		oids := self oids.
+	
+		selection :=  cache resolve: (oids at: anInteger).
+		
+		incomingSelectionIndex := 0.
+	].
+	
+	self changed
+	! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 23:30:54'!
+slots
+
+	| aDictionary |
+	
+	selection ifNil:[^JsonObject new].
+	
+	selection isRealized ifFalse:[^JsonObject new].
+	
+	aDictionary := OrderedDictionary new addAll: selection slots associations ; yourself.
+	
+	aDictionary addAll: (selection outgoing associations collect:[:each | | v | 
+		v := each value ifNil:[0] ifNotNil:[each value oid].		
+		
+		each key -> (ArchiLink new model: self ; src: selection; label: each key; dst: v ; yourself) ]).
+	
+	^aDictionary
+! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:21:35'!
+updateSlots
+	
+	self assert: selection notNil.
+	
+	selection dirty: true.
+	
+	self changed: #oidDisplayList ; changed: #selectionDetails! !
+
 !ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/9/2024 23:30:54'!
 addSlotToSelectedObject: aString default: anObject
 	
@@ -201,11 +356,13 @@ openAddSlotDialog
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/9/2024 23:30:54'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/14/2024 21:53:38'!
 openRemoveSlotDialog
 	
  | mold  |
 
+	selection slots ifEmpty:[^self].
+	
 	mold := Mold new.
 	
 	(mold selectField)
@@ -341,161 +498,6 @@ resolve: aValueHolder
 	
 	] on: PgError do:[:ex | self alert: (ex info at:#M) details: (ex info at:#H) ] on: NetworkError do:[:ex | self alert: 'Network Error' details: ex messageText].
 	! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:11:11'!
-cacheState
-
-	^'cache has {1} resident objects, {2} new objects, {3} modified objects. updated on {4} at {5}' format:{ cache old size . cache fresh size . cache dirtySize . cache expires date . cache expires time } ! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 22:05:50'!
-connectionStatus
-	
-	connection ifNil:[^'Uninitialized'].
-	
-	connection isConnected ifFalse:[^'Not connected'].
-
-	^'Session {1} connected as {2} to database {3} on host {4} at port {5}.' format:{ connection session. settings at:#user . settings at: #database .  settings at: #host . settings at: #port }.
-	
-	! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:29:53'!
-description
-
-	selection ifNil:[^''].
-	
-	selection isRealized :: ifFalse: [^''].
-
-	^selection description! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 18:16:34'!
-description: aString
-
-	selection ifNil:[^false].
-	
-	selection isRealized :: ifFalse: [^false].
-
-	selection description: aString.
-	
-	self changed: #oidDisplayList ; changed: #cacheState.
-	
-	^true
-! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 22:37:15'!
-incoming
-
-	| pairs |
-	
-	selection ifNil:[^{}].
-	
-	pairs := selection incoming collect:[:each | each oid -> (each linkName: selection oid)  ] :: asOrderedCollection sort:[:x : y | x key <= y key ].
-	
-	^ pairs collect:[:each | '{1} ({2})' format: { each value . each key } ].! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 16:34:04'!
-incomingSelectionIndex
-
-	^0! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 23:19:56'!
-incomingSelectionIndex: anInteger
-
-	| oids |
-	
-	oids := selection incoming collect:[:each | each oid ] :: asOrderedCollection sort:[:x : y | x <= y ].
-
-	self navigateTo: (oids at: anInteger).! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 19:41:51'!
-oidDisplayList
-	
-	| oids |
-	
-	oids := (cache old values , cache fresh values ) collect:[:each | 		| prefix | 
-		prefix := each dirty ifTrue:['*'] ifFalse:[''].
-		each oid -> (prefix, each oid asString) ].
-		
-	^ (oids sort: [:x :y | x key <= y key]) collect:[:each | each value ]! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:26:51'!
-oids
-	
-	| oids |
-	
-	oids := cache old keys , cache fresh keys.
-		
-	^oids sort! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 12:31:09'!
-outgoing
-	selection ifNil:[^Dictionary new].
-	
-	selection isRealized ifFalse:[^Dictionary new].
-
-	^selection outgoing collect:[:each | each value ifNil:[0] ifNotNil:[each oid] ].! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 15:04:41'!
-selectionDetails
-
-	selection ifNil:[^''].
-	
-	^selection details! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 2/29/2024 23:18:46'!
-selectionIndex
-
-	| oids |
-	
-	selection ifNil:[^0].
-
-	oids := self oids.
-	
-	^ oids indexOf: selection oid! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 12:38:37'!
-selectionIndex: anInteger
-
-	| oids |
-	
-	anInteger = 0 ifFalse:[
-	
-		oids := self oids.
-	
-		selection :=  cache resolve: (oids at: anInteger).
-		
-		incomingSelectionIndex := 0.
-	].
-	
-	self changed
-	! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 23:30:54'!
-slots
-
-	| aDictionary |
-	
-	selection ifNil:[^JsonObject new].
-	
-	selection isRealized ifFalse:[^JsonObject new].
-	
-	aDictionary := OrderedDictionary new addAll: selection slots associations ; yourself.
-	
-	aDictionary addAll: (selection outgoing associations collect:[:each | | v | 
-		v := each value ifNil:[0] ifNotNil:[each value oid].		
-		
-		each key -> (ArchiLink new model: self ; src: selection; label: each key; dst: v ; yourself) ]).
-	
-	^aDictionary
-! !
-
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/6/2024 22:21:35'!
-updateSlots
-	
-	self assert: selection notNil.
-	
-	selection dirty: true.
-	
-	self changed: #oidDisplayList ; changed: #selectionDetails! !
 
 !ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/2/2024 19:36:40'!
 cloneSelectedObject
@@ -948,7 +950,7 @@ testCommitConflicts
 	
 ! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:55:35'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/14/2024 13:43:24'!
 testDelete
 
 	| root x y z |
@@ -970,13 +972,13 @@ testDelete
 	
 	y := cache clone: x.
 	
-	root linkAt: #x put: x.
+	root link: #x to: x.
 	
 	z := cache clone: root.		
 
 	self assert: (z linkAt:#x) equals: nil.
 	
-	z linkAt:#x put: x.
+	z link:#x to: x.
 		
 	cache checkin: 'testDelete before'.	
 
@@ -1019,7 +1021,7 @@ testDelete
 	
 ! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 22:40:22'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/14/2024 13:43:24'!
 testLinks
 
 	| root obj1 obj2 objx objy |
@@ -1030,7 +1032,7 @@ testLinks
 	
 	obj2 := cache clone: root.
 	
-	obj1 linkAt: #p put: obj2.
+	obj1 link: #p to: obj2.
 	
 	cache checkin: 'testLinks'.
 	
@@ -1291,6 +1293,56 @@ on: aDictionary at: anObject
 	
 	^ aKeyHolder dictionary: aDictionary ; key: anObject ; yourself! !
 
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:44:58'!
+clone: aVersionedObject
+
+	" clone aVersionedObject and answer the clone. The clone has the same slots and links but its links (except prototype) are set to nil "
+	
+	| vobj |
+	
+	vobj := aVersionedObject 	clone: next.
+	
+	next := next - 1.
+	
+	fresh at: vobj oid put: vobj.
+	
+	" We do not add the fresh vobjects to the vobjects dictionary because they cannot be referenced by 
+	objects that we fetch from the database. "
+	
+	^ vobj ! !
+
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:48:18'!
+delete: vobj
+	
+	"remove vobj from all the current objects. vobj must be a realized (non stub) object. "
+	
+	self assert: vobj isRealized.
+	
+	fresh at: vobj oid ifPresent:[ :p | p disconnect . fresh removeKey: p oid . ^ self ].
+	
+	self assert: (vobjects includesKey: vobj oid).
+	
+	vobjects at: vobj oid :: disconnect.
+	
+	vobjects removeKey: vobj oid.
+	! !
+
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:09:48'!
+dirtySize
+
+	^(vobjects count:[:each | each dirty ]) + (fresh count:[:each | each dirty ])
+	! !
+
+!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 20:23:14'!
+evict: oid
+
+	self assert: (fresh includesKey: oid) not. "we cannot evict a modified object"
+	
+	self assert: (vobjects includesKey:oid). "oid in vobjects"
+	
+	vobjects removeKey: oid.
+	! !
+
 !ArchivistCache methodsFor: 'postgres calls' stamp: 'DF 3/12/2024 18:54:31'!
 lookup: aString
 
@@ -1401,7 +1453,7 @@ spObjectsModifiedSince: aDateTime
 	^ result records.
 ! !
 
-!ArchivistCache methodsFor: 'initialization' stamp: 'DF 3/9/2024 19:02:46'!
+!ArchivistCache methodsFor: 'initialization' stamp: 'DF 3/14/2024 19:37:19'!
 initialize
 
 	vobjects := Dictionary new. "maps existing objects by their oid"
@@ -1410,7 +1462,9 @@ initialize
 	
 	fresh := Dictionary new. "maps newly created vobjects by their oid"
 	
-	expires := DateAndTime now. "initialy the cache is up to date until the moment it was created" ! !
+	expires := DateAndTime now. "initialy the cache is up to date until the moment it was created" 
+	
+! !
 
 !ArchivistCache methodsFor: 'accessing' stamp: 'DF 2/19/2024 19:56:58'!
 connection: aPgConnection
@@ -1505,7 +1559,7 @@ fetch: oid revision: rid
 	^ VersionedObject from: attrs.
 ! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/9/2024 22:54:11'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/14/2024 13:43:24'!
 fetchLinks: oid
 
 	self assert: oid notNil.
@@ -1517,7 +1571,7 @@ fetchLinks: oid
 		
 		self assert: source notNil.
 		
-		source linkAt: (each at:#name) put: target.
+		source link: (each at:#name) to: target.
 		source clean. "normally changing links makes the object dirty but not the first time we fetch it from the db." ].  
 		
 	! !
@@ -1600,55 +1654,14 @@ resolve: oid
 		vobject]
 	! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:44:58'!
-clone: aVersionedObject
+!VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 2/24/2024 19:00:07'!
+addChangesTo: anOrderedCollection
 
-	" clone aVersionedObject and answer the clone. The clone has the same slots and links but its links (except prototype) are set to nil "
-	
-	| vobj |
-	
-	vobj := aVersionedObject 	clone: next.
-	
-	next := next - 1.
-	
-	fresh at: vobj oid put: vobj.
-	
-	" We do not add the fresh vobjects to the vobjects dictionary because they cannot be referenced by 
-	objects that we fetch from the database. "
-	
-	^ vobj ! !
+	self subclassResponsibility ! !
 
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:48:18'!
-delete: vobj
-	
-	"remove vobj from all the current objects. vobj must be a realized (non stub) object. "
-	
-	self assert: vobj isRealized.
-	
-	fresh at: vobj oid ifPresent:[ :p | p disconnect . fresh removeKey: p oid . ^ self ].
-	
-	self assert: (vobjects includesKey: vobj oid).
-	
-	vobjects at: vobj oid :: disconnect.
-	
-	vobjects removeKey: vobj oid.
-	! !
-
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:09:48'!
-dirtySize
-
-	^(vobjects count:[:each | each dirty ]) + (fresh count:[:each | each dirty ])
-	! !
-
-!ArchivistCache methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 20:23:14'!
-evict: oid
-
-	self assert: (fresh includesKey: oid) not. "we cannot evict a modified object"
-	
-	self assert: (vobjects includesKey:oid). "oid in vobjects"
-	
-	vobjects removeKey: oid.
-	! !
+!VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 10:16:09'!
+disconnect
+	self subclassResponsibility ! !
 
 !VersionedEntity methodsFor: 'testing' stamp: 'DF 2/26/2024 20:58:06'!
 isRealized
@@ -1663,15 +1676,6 @@ dirty
 oid
 
 	self subclassResponsibility! !
-
-!VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 2/24/2024 19:00:07'!
-addChangesTo: anOrderedCollection
-
-	self subclassResponsibility ! !
-
-!VersionedEntity methodsFor: 'as yet unclassified' stamp: 'DF 3/7/2024 10:16:09'!
-disconnect
-	self subclassResponsibility ! !
 
 !VersionedObject methodsFor: 'testing' stamp: 'DF 3/12/2024 20:51:40'!
 isRealized
@@ -1711,209 +1715,7 @@ clean
 	dirty := false.
 	! !
 
-!VersionedObject methodsFor: 'changes' stamp: 'DF 3/3/2024 20:34:44'!
-incrementRid
-	rid := rid + 1! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/1/2024 12:20:15'!
-description
-	^description! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/2/2024 15:12:35'!
-description: aString
-
-	description := aString.
-	
-	dirty := true.! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:26'!
-dirty
-	^dirty! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:33'!
-dirty: aBoolean
-	dirty := aBoolean! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:45'!
-oid
-	^oid! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:49'!
-oid: anInteger
-	oid := anInteger ! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:53'!
-rid
-	^rid! !
-
-!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:52:02'!
-rid: anInteger
-	rid := anInteger ! !
-
-!VersionedObject methodsFor: 'copying' stamp: 'DF 3/9/2024 23:31:13'!
-clone: newoid
-
-	| vobj c p |
-	
-	vobj := self class new.
-	
-	vobj oid: newoid.
-	
-	c := JsonObject new.
-	p := self.
-	
-	[p notNil] whileTrue:[ 
-		
-		c := JsonObject new , p slots , c.
-
-		p outgoing keys do:[:each | vobj linkAt: each put: nil ].
-		
-		p := p linkAt: 'parent' ifAbsent:[nil] ]. 
-	
-	vobj slots: c.
-	
-	vobj linkAt: 'prototype' put: self.
-	
-	^vobj! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 11:55:15'!
-addIncoming: aVersionedObject
-
-	self assert: aVersionedObject notNil.
-	
-	in at: aVersionedObject oid put: aVersionedObject! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/12/2024 22:44:19'!
-disconnect
-			
-	out do:[:each | each removeIncoming: self].
-
-	" first make them dirty, this will force any stubs to be replaced by their actual objects. "
-	
-	in do:[:each | each dirty: true. ].
-	
-	in do:[:each | each nullifyOutgoing: self.  ].
-	
-! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 2/26/2024 18:59:49'!
-incoming
-	^in  ! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 2/29/2024 12:39:21'!
-linkAt: aString
-	^ out at: aString! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 2/29/2024 13:04:33'!
-linkAt: aString ifAbsent: aBlock
-	^ out at: aString ifAbsent: aBlock! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/19/2024 18:52:46'!
-linkAt: aString put: aVersionedEntity 
-
-	out at: aString ifPresent:[:old | old ifNotNil:[ | n | 
-		
-			" self may reference old more than once. Check how many 	times it 
-			references od 	and remove self from old 	only if the count is 1. "
-	
-			n := out count:[:each | each notNil and:[each oid = old oid] ].
-	
-			n = 1 ifTrue: [			old removeIncoming: self ] ] ].
-	
-	out at: aString put: aVersionedEntity. 
-	
-	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
-	
-	dirty := true.
-	! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 15:48:13'!
-linkName: anInteger
-
-	"answer the name by which the receiver links to oid"
-	
-	^out associations detect:[:each | each value notNil and:[each value oid = anInteger ] ] ifFound:[:each | each key ] ifNone:[''].
-	! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 17:00:03'!
-nullifyOutgoing: aVersionedEntity
-
-	out := out collect:[:each | each notNil and:[each oid = aVersionedEntity oid] :: ifTrue:[nil] ifFalse:[each] ]
-! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 2/26/2024 18:59:45'!
-outgoing
-	^out ! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/10/2024 23:00:01'!
-outgoing: aDictionary
-	out := aDictionary 
-	! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/13/2024 10:55:05'!
-relink: anInteger to: aVersionedObject
-
-	self assert: anInteger < 0.
-	
-	self assert: ((in at: anInteger) = aVersionedObject).
-	
-	in removeKey: anInteger.
-	
-	in at: aVersionedObject oid put: aVersionedObject.! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 21:07:58'!
-removeAllOutgoingLinks
-
-	out do:[:each | each ifNotNil:[ each removeIncoming: self ] ].
-	
-	out := Dictionary new.! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 11:54:29'!
-removeIncoming: aVersionedObject
-
-	in removeKey: aVersionedObject oid! !
-
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/7/2024 12:05:23'!
-removeOutgoing: aVersionedEntity
-
-	out := out reject:[:each | each ifNil:[false] ifNotNil:[ each oid = aVersionedEntity oid] ]! !
-
-!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
-at: aSymbol
-	^ slots at: aSymbol! !
-
-!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
-at: aSymbol put: anObject
-
-	| result |
-	
-	result := slots at: aSymbol put: anObject.
-	
-	dirty := true.
-	
-	^result! !
-
-!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
-removeSlotAt: aString
-	slots removeKey: aString! !
-
-!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
-slots
-	^slots! !
-
-!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
-slots: aJsonObj
-
-	slots := aJsonObj.
-	
-	dirty := true.! !
-
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:50:49'!
-details
-
-	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ; nextPutAll: ' rid: ' , rid asString ; nextPutAll: (dirty ifTrue:[' dirty'] ifFalse:[' clean']) ] ! !
-
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 10:55:46'!
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/13/2024 10:55:46'!
 fix: base
 
 	self assert: oid < 0.
@@ -1930,7 +1732,11 @@ fix: base
 	
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:12:35'!
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/3/2024 20:34:44'!
+incrementRid
+	rid := rid + 1! !
+
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/14/2024 13:43:24'!
 merge: pred latest: succ
 
 	|  predkeys keys succkeys objs |
@@ -1963,7 +1769,7 @@ merge: pred latest: succ
 	
 	out := Dictionary new. "clear out, we will rebuild it from keys and objs in the next two statements"
 	
-	objs associations do:[ :each |self linkAt: each key put: each value   ].
+	objs associations do:[ :each |self link: each key to: each value   ].
 
 	keys associations do:[:each | each value isKindOf: NonDeterministicChoice :: ifTrue:[ out at: each key put: each value ]   ]. "keep non deterministic choice as it is"
 	
@@ -1971,12 +1777,165 @@ merge: pred latest: succ
 	
 	! !
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:50:58'!
-realize
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/1/2024 12:20:15'!
+description
+	^description! !
 
-	"do nothing. this method does not exist in the stub so calling it will force the stub to load the real object"! !
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/2/2024 15:12:35'!
+description: aString
 
-!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:20:21'!
+	description := aString.
+	
+	dirty := true.! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:26'!
+dirty
+	^dirty! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:33'!
+dirty: aBoolean
+	dirty := aBoolean! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/26/2024 18:59:49'!
+incoming
+	^in  ! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/29/2024 12:39:21'!
+linkAt: aString
+	^ out at: aString! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/29/2024 13:04:33'!
+linkAt: aString ifAbsent: aBlock
+	^ out at: aString ifAbsent: aBlock! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:45'!
+oid
+	^oid! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:49'!
+oid: anInteger
+	oid := anInteger ! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 2/26/2024 18:59:45'!
+outgoing
+	^out ! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/10/2024 23:00:01'!
+outgoing: aDictionary
+	out := aDictionary 
+	! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:51:53'!
+rid
+	^rid! !
+
+!VersionedObject methodsFor: 'accessing' stamp: 'DF 3/12/2024 20:52:02'!
+rid: anInteger
+	rid := anInteger ! !
+
+!VersionedObject methodsFor: 'copying' stamp: 'DF 3/14/2024 13:43:24'!
+clone: newoid
+
+	| vobj c p |
+	
+	vobj := self class new.
+	
+	vobj oid: newoid.
+	
+	c := JsonObject new.
+	p := self.
+	
+	[p notNil] whileTrue:[ 
+		
+		c := JsonObject new , p slots , c.
+
+		p outgoing keys do:[:each | vobj link: each to: nil ].
+		
+		p := p linkAt: 'parent' ifAbsent:[nil] ]. 
+	
+	vobj slots: c.
+	
+	vobj link: 'prototype' to: self.
+	
+	^vobj! !
+
+!VersionedObject methodsFor: 'private' stamp: 'DF 3/7/2024 11:55:15'!
+addIncoming: aVersionedObject
+
+	self assert: aVersionedObject notNil.
+	
+	in at: aVersionedObject oid put: aVersionedObject! !
+
+!VersionedObject methodsFor: 'private' stamp: 'DF 3/14/2024 19:13:13'!
+nullifyOutgoingTo: aVersionedEntity
+
+	out := out collect:[:each | each notNil and:[each oid = aVersionedEntity oid] :: ifTrue:[nil] ifFalse:[each] ]
+! !
+
+!VersionedObject methodsFor: 'private' stamp: 'DF 3/13/2024 10:55:05'!
+relink: anInteger to: aVersionedObject
+
+	self assert: anInteger < 0.
+	
+	self assert: ((in at: anInteger) = aVersionedObject).
+	
+	in removeKey: anInteger.
+	
+	in at: aVersionedObject oid put: aVersionedObject.! !
+
+!VersionedObject methodsFor: 'private' stamp: 'DF 3/7/2024 11:54:29'!
+removeIncoming: aVersionedObject
+
+	in removeKey: aVersionedObject oid! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/14/2024 19:13:13'!
+disconnect
+			
+	out do:[:each | each removeIncoming: self].
+	
+	" first make them dirty, this will force any stubs to be replaced by their actual objects. "
+	
+	in do:[:each | each dirty: true. ].
+	
+	in do:[:each | each nullifyOutgoingTo: self.  ].
+	
+! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/14/2024 20:20:41'!
+link: aString to: aVersionedEntity 
+	
+	out at: aString ifPresent:[:old | old ifNotNil:[ | n | 
+		
+			" self may reference old more than once. Check how many 	times it 
+			references old 	and remove self from old 	only if the count is 1. "
+	
+			n := out count:[:each | each oid = old oid ].
+	
+			n = 1 ifTrue: [			old removeIncoming: self ] ] ].
+	
+	out at: aString put: aVersionedEntity. 
+	
+	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
+	
+	dirty := true.
+	! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/14/2024 20:11:12'!
+linkNameOf: anInteger
+
+	"answer the name by which the receiver links to oid"
+	
+	^out associations detect:[:each | each value notNil and:[each value oid = anInteger ] ] ifFound:[:each | each key ] ifNone:[''].
+	! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/8/2024 21:07:58'!
+removeAllOutgoingLinks
+
+	out do:[:each | each ifNotNil:[ each removeIncoming: self ] ].
+	
+	out := Dictionary new.! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/14/2024 13:43:24'!
 replace: aStubObject with: aVersionedObject
 
 	| names origdirty |
@@ -1990,10 +1949,50 @@ replace: aStubObject with: aVersionedObject
 	out keysAndValuesDo: [:key :value | 
 		value oid = aStubObject oid ifTrue:[ names add: key ] ].
 	
-	names do:[:each | self linkAt: each put: aVersionedObject ].
+	names do:[:each | self link: each to: aVersionedObject ].
 	
 	dirty := origdirty. 
 	! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:50:49'!
+details
+
+	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ; nextPutAll: ' rid: ' , rid asString ; nextPutAll: (dirty ifTrue:[' dirty'] ifFalse:[' clean']) ] ! !
+
+!VersionedObject methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 12:50:58'!
+realize
+
+	"do nothing. this method does not exist in the stub so calling it will force the stub to load the real object"! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+at: aSymbol
+	^ slots at: aSymbol! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+at: aSymbol put: anObject
+
+	| result |
+	
+	result := slots at: aSymbol put: anObject.
+	
+	dirty := true.
+	
+	^result! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+removeSlotAt: aString
+	slots removeKey: aString! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+slots
+	^slots! !
+
+!VersionedObject methodsFor: 'slots' stamp: 'DF 3/9/2024 23:32:04'!
+slots: aJsonObj
+
+	slots := aJsonObj.
+	
+	dirty := true.! !
 
 !VersionedObject class methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:22:00'!
 from: aDictionary 
@@ -2006,6 +2005,58 @@ from: aDictionary
 	
 	^aVersionedObject ! !
 
+!VersionedObjectStub methodsFor: 'changes' stamp: 'DF 2/28/2024 20:43:59'!
+addChangesTo: anOrderedCollection
+
+	" a stub has no outgoing links "
+	! !
+
+!VersionedObjectStub methodsFor: 'links' stamp: 'DF 3/14/2024 13:43:23'!
+link: aString to: aVersionedEntity
+
+	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
+! !
+
+!VersionedObjectStub methodsFor: 'links' stamp: 'DF 3/14/2024 20:11:12'!
+linkNameOf: anInteger
+
+	^'...'! !
+
+!VersionedObjectStub methodsFor: 'links' stamp: 'DF 3/13/2024 11:22:02'!
+relink: anInteger to: aVersionedObject
+
+	"do nothing as the stub does not keep the incoming objects indexed by their oid"! !
+
+!VersionedObjectStub methodsFor: 'private' stamp: 'DF 2/25/2024 20:21:03'!
+addIncoming: aLink
+	in add: aLink! !
+
+!VersionedObjectStub methodsFor: 'private' stamp: 'DF 2/28/2024 22:20:10'!
+removeIncoming: aLink
+	in remove: aLink! !
+
+!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/28/2024 20:42:53'!
+clean
+	"a stub is always clean"! !
+
+!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:24:44'!
+details
+
+	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ] ! !
+
+!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:19:01'!
+doesNotUnderstand: aMessage
+
+	| vobj |
+
+	cache evict: oid.
+		
+	vobj := cache resolve: oid.
+	
+	in do:[:each | each replace: self with: vobj].
+		
+	^aMessage sendTo: vobj.! !
+
 !VersionedObjectStub methodsFor: 'testing' stamp: 'DF 2/26/2024 20:59:02'!
 isRealized
 	^false! !
@@ -2013,6 +2064,11 @@ isRealized
 !VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 2/25/2024 16:38:44'!
 cache: anArchivistCache
 	cache := anArchivistCache ! !
+
+!VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 2/26/2024 23:33:50'!
+description
+
+	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ] ! !
 
 !VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 2/25/2024 20:08:25'!
 dirty
@@ -2036,63 +2092,6 @@ oid: anInteger
 !VersionedObjectStub methodsFor: 'initialization' stamp: 'DF 2/25/2024 20:20:43'!
 initialize
 	in := Set new! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/28/2024 20:43:59'!
-addChangesTo: anOrderedCollection
-
-	" a stub has no outgoing links "
-	! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/25/2024 20:21:03'!
-addIncoming: aLink
-	in add: aLink! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/28/2024 20:42:53'!
-clean
-	"a stub is always clean"! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/26/2024 23:33:50'!
-description
-
-	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ] ! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:24:44'!
-details
-
-	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ] ! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 21:19:01'!
-doesNotUnderstand: aMessage
-
-	| vobj |
-
-	cache evict: oid.
-		
-	vobj := cache resolve: oid.
-	
-	in do:[:each | each replace: self with: vobj].
-		
-	^aMessage sendTo: vobj.! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/2/2024 20:30:34'!
-linkAt: aString put: aVersionedEntity
-
-	aVersionedEntity ifNotNil:[ aVersionedEntity addIncoming: self ].
-! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 16:11:58'!
-linkName: anInteger
-
-	^'...'! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 3/13/2024 11:22:02'!
-relink: anInteger to: aVersionedObject
-
-	"do nothing as the stub does not keep the incoming objects indexed by their oid"! !
-
-!VersionedObjectStub methodsFor: 'as yet unclassified' stamp: 'DF 2/28/2024 22:20:10'!
-removeIncoming: aLink
-	in remove: aLink! !
 
 !Object methodsFor: '*Archivist' stamp: 'DF 3/12/2024 20:08:28'!
 decodeJsonCtor

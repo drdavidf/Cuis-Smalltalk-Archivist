@@ -19,3 +19,6 @@ addition to the comment,
 <comment author="Alice" date="10/3/24">suggestion: the comment's author (more concise)</comment>
 <comment author="Bob" date="12/3/24">yes, that's a good idea.</comment>
 </discussion> and the date on which it was created.</p>
+
+This way we can create XML representations for all kinds of structured documents, for example use cases, and plain text will 
+be encoded in a simple XML format (that still supports review discussions).
