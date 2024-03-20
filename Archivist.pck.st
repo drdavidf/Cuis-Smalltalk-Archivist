@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 13 March 2024 at 9:51:38 pm'!
+'From Cuis6.3 [latest update: #6253] on 19 March 2024 at 11:40:21 pm'!
 'Description '!
-!provides: 'Archivist' 1 154!
+!provides: 'Archivist' 1 161!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -736,7 +736,7 @@ update: aSymbol
 	
 	self scroller: form.! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:44:08'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/19/2024 18:07:50'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -753,7 +753,7 @@ self layoutMorph addMorph:
 </>
 (TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
 </>
-(TextModelMorph textProvider: model textGetter: #description textSetter:#description: :: pw:1.0 ; ph:0.7)
+(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: :: pw:1.0 ; ph:0.7)
 </>
 ((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect' ) fh:48) .
 
@@ -1692,12 +1692,12 @@ asJSON
 
 ^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid ifNil:[0] . (Json render: (slots collect:[:each | each encodeJsonCtor ]) )  . description jsonPrint . aWriteStream contents }! !
 
-!VersionedObject methodsFor: 'initialization' stamp: 'DF 3/9/2024 23:32:04'!
+!VersionedObject methodsFor: 'initialization' stamp: 'DF 3/19/2024 23:31:05'!
 initialize
 	in := Dictionary new.
 	out := Dictionary new.
 	slots := JsonObject new.
-	description := ''! !
+	description := AnnotatedText fromString:''! !
 
 !VersionedObject methodsFor: 'changes' stamp: 'DF 2/24/2024 19:04:50'!
 addChangesTo: anOrderedCollection
@@ -1808,7 +1808,7 @@ linkAt: aString
 linkAt: aString ifAbsent: aBlock
 	^ out at: aString ifAbsent: aBlock! !
 
-!VersionedObject methodsFor: 'links' stamp: 'DF 3/13/2024 21:44:02'!
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/19/2024 18:52:46'!
 linkAt: aString put: aVersionedEntity 
 
 	out at: aString ifPresent:[:old | old ifNotNil:[ | n | 
@@ -1816,7 +1816,7 @@ linkAt: aString put: aVersionedEntity
 			" self may reference old more than once. Check how many 	times it 
 			references od 	and remove self from old 	only if the count is 1. "
 	
-			n := out count:[:each | each oid = old oid ].
+			n := out count:[:each | each notNil and:[each oid = old oid] ].
 	
 			n = 1 ifTrue: [			old removeIncoming: self ] ] ].
 	
