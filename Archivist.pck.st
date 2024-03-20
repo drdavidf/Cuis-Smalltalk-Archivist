@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 19 March 2024 at 11:40:21 pm'!
+'From Cuis6.0 [latest update: #6153] on 20 March 2024 at 3:50:32 pm'!
 'Description '!
-!provides: 'Archivist' 1 161!
+!provides: 'Archivist' 1 162!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -738,7 +738,7 @@ update: aSymbol
 	
 	self scroller: form.! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/19/2024 18:07:50'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 15:19:15'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -757,7 +757,7 @@ self layoutMorph addMorph:
 </>
 (AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: :: pw:1.0 ; ph:0.7)
 </>
-((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect' ) fh:48) .
+((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) .
 
 self setLabel:'Archivist Browser'.
 
