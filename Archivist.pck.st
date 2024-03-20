@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 20 March 2024 at 8:25:01 pm'!
+'From Cuis6.3 [latest update: #6253] on 21 March 2024 at 12:13:26 am'!
 'Description '!
-!provides: 'Archivist' 1 164!
+!provides: 'Archivist' 1 172!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -176,7 +176,7 @@ addSlotToSelectedObject: aString default: anObject
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/8/2024 13:07:09'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/21/2024 00:04:21'!
 openAddSlotDialog
 	
  | mold  defaults |
@@ -198,11 +198,11 @@ openAddSlotDialog
 
 	mold when: #edited evaluate:[ self addSlotToSelectedObject: (mold fields at:1) value default: (defaults at: (mold fields at:2) value) ].
 	
-	mold openDialog: 'Add a slot'.
+	mold openDialog: 'Add a slot' at: Sensor mousePoint.
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/14/2024 21:53:38'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/21/2024 00:07:28'!
 openRemoveSlotDialog
 	
  | mold  |
@@ -218,7 +218,7 @@ openRemoveSlotDialog
 
 	mold when: #edited evaluate:[ self removeSlotFromSelectedObject: (mold fields at:1) value ].
 	
-	mold openDialog: 'Remove a slot'.
+	mold openDialog: 'Remove a slot' at: Sensor mousePoint.
 	
 	! !
 
@@ -361,12 +361,12 @@ connectionStatus
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 20:20:04'!
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 20:34:58'!
 description
 
 	selection ifNil:[^ AnnotatedText fromString:''].
 	
-	selection isRealized :: ifFalse: [^AnnotatedText fromString:''''].
+	selection isRealized :: ifFalse: [^AnnotatedText fromString:''].
 
 	^selection description! !
 
@@ -500,6 +500,10 @@ updateSlots
 	
 	self changed: #oidDisplayList ; changed: #selectionDetails! !
 
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 21:19:42'!
+user
+	^settings at:#user! !
+
 !ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/2/2024 19:36:40'!
 cloneSelectedObject
 
@@ -539,7 +543,7 @@ fetchSelectedObject
 	
 	self selectionIndex: self selectionIndex.! !
 
-!ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/9/2024 20:39:59'!
+!ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/21/2024 00:04:36'!
 openConnectionDialog
 	
 	|mold|
@@ -563,10 +567,10 @@ openConnectionDialog
 
 	mold when: #edited send: #reconnect to: self.
 	
-	mold openDialog: 'Connect to server'.
+	mold openDialog: 'Connect to server' at: Sensor mousePoint.
 	! !
 
-!ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/9/2024 22:01:31'!
+!ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/21/2024 00:00:49'!
 openResolveDialog
 
 	|mold holder |
@@ -578,8 +582,11 @@ openResolveDialog
 	(mold integerField) label:'Object identifier' ; on: #propertyValue of: holder ; customize:[:w :i :e | i borderColor: Color veryLightGray ] ; beRequired.
 
 	mold when: #edited send: #resolve: to: self with: holder.
+		
+	mold openDialog: 'Resolve object identifier' at: Sensor mousePoint.
 	
-	mold openDialog: 'Resolve object identifier'.
+	self runningWorld activeHand newKeyboardFocus: mold fields first inputMorph.
+
 ! !
 
 !ArchivistCacheModel methodsFor: 'menus' stamp: 'DF 3/10/2024 19:49:30'!
@@ -739,7 +746,7 @@ update: aSymbol
 	
 	self scroller: form.! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 15:19:15'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 21:30:27'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -756,7 +763,7 @@ self layoutMorph addMorph:
 </>
 (TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
 </>
-(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: :: pw:1.0 ; ph:0.7)
+(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: author: model user :: pw:1.0 ; ph:0.7)
 </>
 ((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) .
 
@@ -764,7 +771,7 @@ self setLabel:'Archivist Browser'.
 
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 21:52:59'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 23:44:34'!
 openCommitDialog
 
 	| panel dh dw t cp cw |
@@ -774,7 +781,7 @@ openCommitDialog
 	panel := PluggableDialogPanel 
 		open:  t 
 		label: 'Commit changes'
-		view: self "#yourself"
+		view: #yourself
 		action: [ panel delete. model commit: t text ].
 
 	dh := FontFamily defaultFamilyAndPointSize lineSpacing.
@@ -795,7 +802,7 @@ openCommitDialog
 
 ! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:34:15'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 23:28:29'!
 residentObjectsMenu
 
 	| aMenu |
@@ -810,7 +817,7 @@ residentObjectsMenu
 			#balloonText 	-> 			'Commit all the changes to objects that were modified since the last commit.'
 		} asDictionary.
 		{
-			#label 			-> 			'merge latest changes'.
+			#label 			-> 			'catch up'.
 			#object -> model.
 			#selector 		-> 			#merge .
 			#balloonText 	-> 			'Load the latest changes to objects resident in the cache and merge their content with the content of any modified objects.'
@@ -2014,9 +2021,10 @@ isRealized
 cache: anArchivistCache
 	cache := anArchivistCache ! !
 
-!VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 2/26/2024 23:33:50'!
+!VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 3/20/2024 20:31:27'!
 description
 
+	self halt.
 	^String streamContents:[:s | s nextPutAll: self class name ; nextPutAll: ' oid: ' , oid asString ] ! !
 
 !VersionedObjectStub methodsFor: 'accessing' stamp: 'DF 2/25/2024 20:08:25'!
@@ -2238,3 +2246,23 @@ openConnectionToHostNamed: hostName port: portNumber timeout: anInteger
 	| hostIP |
 	hostIP := NetNameResolver addressForName: hostName timeout: anInteger.
 	^self openConnectionToHost: hostIP port: portNumber timeout: anInteger! !
+
+!Mold methodsFor: '*Archivist' stamp: 'DF 3/20/2024 23:42:32'!
+openDialog: title at: aPoint
+
+	| panel |
+	
+	panel := nil.
+	
+	panel := PluggableDialogPanel 
+		open: self
+		label: title 
+		view: #renderForms 
+		action: [self validate.
+			panel morphExtent: panel minimumExtent. "I don't like to do it manually"
+			self isValid 	ifTrue: [
+				self save.
+				self triggerEvent: #edited.
+				panel delete] ].
+		
+	panel morphPosition: aPoint.! !
