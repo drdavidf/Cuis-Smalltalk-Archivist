@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 20 March 2024 at 7:02:14 pm'!
+'From Cuis6.3 [latest update: #6253] on 20 March 2024 at 7:59:17 pm'!
 'Description '!
-!provides: 'Archivist' 1 162!
+!provides: 'Archivist' 1 163!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -1682,7 +1682,7 @@ disconnect
 isRealized
 	^true! !
 
-!VersionedObject methodsFor: 'converting' stamp: 'DF 3/12/2024 19:55:51'!
+!VersionedObject methodsFor: 'converting' stamp: 'DF 3/20/2024 19:58:25'!
 asJSON
 
 	| aWriteStream |
@@ -1695,7 +1695,7 @@ asJSON
 		id := assoc value ifNil:[0] ifNotNil:[assoc value oid]. 
 		aWriteStream nextPutAll: ('\{"target":{1}, "name":"{2}" \}' format: { id . assoc key} ) ] separatedBy: [ aWriteStream nextPutAll: ','].
 
-^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid ifNil:[0] . (Json render: (slots collect:[:each | each encodeJsonCtor ]) )  . description jsonPrint . aWriteStream contents }! !
+^ '\{"oid": {1} , "rid":{2}, "slots" : {3} , "description" : {4}, "links":[{5}] \}' format: { oid . rid ifNil:[0] . (Json render: (slots collect:[:each | each encodeJsonCtor ]) )  . description asXML jsonPrint . aWriteStream contents }! !
 
 !VersionedObject methodsFor: 'initialization' stamp: 'DF 3/19/2024 23:31:05'!
 initialize
@@ -1995,14 +1995,14 @@ removeIncoming: aVersionedObject
 
 	in removeKey: aVersionedObject oid! !
 
-!VersionedObject class methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 20:22:00'!
+!VersionedObject class methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 19:59:14'!
 from: aDictionary 
 
 	| aVersionedObject |
 	
 	aVersionedObject := self new.
 	
-	aVersionedObject oid: (aDictionary at: #oid) ; rid:(aDictionary at:#rid); slots: ((aDictionary at:#slots) collect:[:each | each decodeJsonCtor ]) ; description: (aDictionary at:#description) ; dirty: false .
+	aVersionedObject oid: (aDictionary at: #oid) ; rid:(aDictionary at:#rid); slots: ((aDictionary at:#slots) collect:[:each | each decodeJsonCtor ]) ; description: (AnnotatedText fromXML:(aDictionary at:#description)) ; dirty: false .
 	
 	^aVersionedObject ! !
 
