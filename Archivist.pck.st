@@ -1,6 +1,6 @@
-'From Cuis6.0 [latest update: #6153] on 22 March 2024 at 11:55:24 pm'!
+'From Cuis6.0 [latest update: #6153] on 23 March 2024 at 9:28:16 pm'!
 'Description '!
-!provides: 'Archivist' 1 199!
+!provides: 'Archivist' 1 210!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -19,6 +19,16 @@ TextProvider subclass: #ArchivistCacheModel
 	category: 'Archivist-UI'!
 !classDefinition: 'ArchivistCacheModel class' category: #'Archivist-UI'!
 ArchivistCacheModel class
+	instanceVariableNames: ''!
+
+!classDefinition: #Undecided category: #'Archivist-Core'!
+Boolean subclass: #Undecided
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-Core'!
+!classDefinition: 'Undecided class' category: #'Archivist-Core'!
+Undecided class
 	instanceVariableNames: ''!
 
 !classDefinition: #NonDeterministicChoice category: #'Archivist-Core'!
@@ -109,6 +119,16 @@ Field subclass: #AsciiStringField
 	category: 'Archivist-UI'!
 !classDefinition: 'AsciiStringField class' category: #'Archivist-UI'!
 AsciiStringField class
+	instanceVariableNames: ''!
+
+!classDefinition: #KleeneanField category: #'Archivist-UI'!
+Field subclass: #KleeneanField
+	instanceVariableNames: 'listModel'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-UI'!
+!classDefinition: 'KleeneanField class' category: #'Archivist-UI'!
+KleeneanField class
 	instanceVariableNames: ''!
 
 !classDefinition: #LinkField category: #'Archivist-UI'!
@@ -664,6 +684,22 @@ revertSelectedObject
 	
 	self changed.! !
 
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:27:22'!
+encodeJsonCtor
+
+	^JsonObject fromAssociations: { #v -> self . #c -> self name  }
+! !
+
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:17:13'!
+fromString: aString
+
+	^self! !
+
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:25:46'!
+jsonWriteOn: aWriteStream
+
+	aWriteStream nextPutAll:'null'.! !
+
 !NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:25:27'!
 addFieldOn: anObject at: aKey to: aMold
 
@@ -840,12 +876,12 @@ getMenu
 objectGetter: aSymbol
 	objectGetter := aSymbol! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 19:07:39'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:44:32'!
 save
 
 	mold validate.
 	
-	mold isValid ifTrue: [ 
+	mold isValid ifTrue: [
 		mold save .  
 		mold fields allSatisfy:# isValid :: "could be false if something goes wrong during the save (e.g. with access to database) "
 			ifTrue: [		model updateSlots ] ].! !
@@ -1270,7 +1306,7 @@ testMergeConflicts
 	self assert: (root at:#y) equals: 13.
 ! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 19:33:12'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:27:55'!
 testTypes
 
 	| root x |
@@ -1286,7 +1322,9 @@ testTypes
 		at: #s put: 'Hello, world' ;
 		at: #c put: DateAndTime now ;
 		at: #d put: Date today ;
-		at: #t put: Time now.
+		at: #t put: Time now ;
+		at: #u put: Undecided.
+
 		
 	cache checkin: 'testTypes'.
 	
@@ -1303,16 +1341,67 @@ testTypes
 	self assert: (x at:#c) equals: (root at:#c).
 	self assert: (x at:#d) equals: (root at:#d).
 	self assert: (x at:#t) equals: (root at:#t).
+	self assert: (x at:#u) equals: (root at:#u).
 ! !
+
+!DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:43:36'!
+inputMorphContents
+" The inputMorph had already changed the listModel, ask its listIndex "
+	^ listModel listIndex ! !
 
 !DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:23:57'!
 inputMorphInstance
 	^ ArchiDropDownMorph new! !
 
+!DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:49:01'!
+on: accessor of: model
+
+	listModel := ListModel with: model values.
+	
+	listModel listIndex: (model perform: accessor).
+	
+	self inputMorph model: listModel listGetter: #list indexGetter: #listIndex indexSetter: #listIndex:.
+
+	input := model perform: accessor.
+
+	value := input.
+	
+	self callback: [:val | model perform: (accessor, ':') asSymbol with: val]! !
+
 !AsciiStringField methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 20:34:40'!
 disinfect: aString
 	"Convert aString into the type of object that this field ultimately represents"
 	^aString asByteStringIfAscii! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:14:32'!
+highlightInputMorph
+	self inputMorph color: (self isValid 
+		ifTrue: [self inputMorph defaultColor]
+		ifFalse: [Color red muchLighter])! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:01:50'!
+inputMorphContents
+" The inputMorph had already changed the listModel, ask its listIndex "
+	^ `{ True . False . Undecided }` at:  listModel listIndex ! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:23:13'!
+inputMorphInstance
+	^ ArchiDropDownMorph new! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:53:59'!
+on: accessor of: model
+
+	listModel := ListModel with: { 'Yes' . 'No' . 'Undecided' }.
+	
+	listModel listIndex: (` { True -> 1. False -> 2 . Undecided -> 3 } ` asDictionary at: (model perform: accessor)).
+	
+	self inputMorph model: listModel listGetter: #list indexGetter: #listIndex indexSetter: #listIndex:.
+
+	input := listModel listIndex.
+
+	value := `{ True . False . Undecided }` at: input.
+	
+	self callback: [:val | model perform: (accessor, ':') asSymbol with: val]! !
 
 !LinkField methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:55:46'!
 disinfect: aString 
@@ -1844,10 +1933,10 @@ resolve: oid
 		vobject]
 	! !
 
-!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 17:47:13'!
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:44:02'!
 addFieldOn: anObject at: aKey to: aMold
 
-	^(aMold fields add: DropDownSelectField new) on: #listIndex of:(ListModel with: (anObject at: aKey) values :: listIndex:1).! !
+	^(aMold fields add: DropDownSelectField new) on: #index of:(anObject at: aKey).! !
 
 !Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:28:05'!
 encodeJsonCtor
@@ -1859,7 +1948,7 @@ encodeJsonCtor
 index
 	^index! !
 
-!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:25:59'!
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:49:30'!
 index: anInteger
 
 	index := anInteger ! !
@@ -2358,13 +2447,13 @@ encodeJsonCtor
 	^JsonObject fromAssociations: { #v -> self . #c -> self class name }
 	! !
 
-!Boolean methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:26:43'!
-addFieldOn: anObject at: aKey to: aMold
-	^aMold checkboxField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
-
-!Boolean methodsFor: '*Archivist' stamp: 'DF 3/12/2024 20:03:43'!
+!Boolean methodsFor: '*Archivist' stamp: 'DF 3/23/2024 21:22:57'!
 encodeJsonCtor
 	^self! !
+
+!Boolean class methodsFor: '*Archivist' stamp: 'DF 3/23/2024 20:28:25'!
+addFieldOn: anObject at: aKey to: aMold
+	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
 
 !Float methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:26:54'!
 addFieldOn: anObject at: aKey to: aMold
