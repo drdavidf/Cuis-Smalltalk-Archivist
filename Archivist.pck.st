@@ -1,6 +1,6 @@
-'From Cuis6.0 [latest update: #6153] on 23 March 2024 at 9:28:16 pm'!
+'From Cuis6.0 [latest update: #6153] on 23 March 2024 at 11:47:52 pm'!
 'Description '!
-!provides: 'Archivist' 1 210!
+!provides: 'Archivist' 1 212!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -409,14 +409,14 @@ addSlotToSelectedObject: aString default: anObject
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/22/2024 15:43:34'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/23/2024 23:35:34'!
 openAddSlotDialog
 	
  | mold  defaults |
 
 	defaults := OrderedDictionary new.
 	
-	{#Link -> nil . #Integer -> 0 . #Float -> 0.0 . #String -> '' . #Boolean -> true . #Date -> Date today . #Time -> Time now } do: [:each | defaults at: each key put: each value ].
+	{#Link -> nil . #Integer -> 0 . #Float -> 0.0 . #String -> '' . #Boolean -> Undecided . #Date -> Date today . #Time -> Time now } do: [:each | defaults at: each key put: each value ].
 	
 	self enumerations keysAndValuesDo:[:key :eobj | defaults at: key put: (Enumeration new oid: eobj oid; obj: eobj ; index:1;  yourself) ].
 	
@@ -684,6 +684,10 @@ revertSelectedObject
 	
 	self changed.! !
 
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:31:01'!
+addFieldOn: anObject at: aKey to: aMold
+	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
 !Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:27:22'!
 encodeJsonCtor
 
@@ -839,7 +843,12 @@ minimumExtent
 	unit := f pointSize.
 	^(4 * unit) @ f lineSpacing.! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 13:15:32'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:03:54'!
+cancel
+
+	^self update: #slots! !
+
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 22:58:14'!
 getMenu
 
 	| aMenu |
@@ -867,6 +876,13 @@ getMenu
 			#object -> self.
 			#selector 		-> 			#save.
 			#balloonText 	-> 			'Accept the changes.'
+		} asDictionary.
+
+		{
+			#label 			-> 			'cancel'.
+			#object -> self.
+			#selector 		-> 			#cancel.
+			#balloonText 	-> 			'Cancel the changes.'
 		} asDictionary.
 		
 	}.
@@ -903,7 +919,7 @@ update: aSymbol
 	
 	self scroller: form.! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 21:30:27'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:47:00'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -916,13 +932,13 @@ self layoutMorph addMorph:
 	(MoldScrollPane new model: model ; objectGetter: #slots ; yourself :: ph:1 ;pw:(1/2))
 	<+>
 	(PluggableListMorph model: model listGetter: #incoming indexGetter: #incomingSelectionIndex indexSetter: #incomingSelectionIndex: :: ph:1 ; pw:(1/4)) ph:0.3
-)
+) 
 </>
-(TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
+((TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:32)
 </>
-(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: author: model user :: pw:1.0 ; ph:0.7)
+(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: author: model user :: pw:1.0 ; ph:1.0)
 </>
-((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) .
+((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) ph:0.7).
 
 self setLabel:'Archivist Browser'.
 
@@ -1379,27 +1395,27 @@ highlightInputMorph
 		ifTrue: [self inputMorph defaultColor]
 		ifFalse: [Color red muchLighter])! !
 
-!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:01:50'!
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:26:31'!
 inputMorphContents
 " The inputMorph had already changed the listModel, ask its listIndex "
-	^ `{ True . False . Undecided }` at:  listModel listIndex ! !
+	^ `{ true . false . Undecided }` at:  listModel listIndex ! !
 
 !KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:23:13'!
 inputMorphInstance
 	^ ArchiDropDownMorph new! !
 
-!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:53:59'!
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:26:18'!
 on: accessor of: model
 
 	listModel := ListModel with: { 'Yes' . 'No' . 'Undecided' }.
 	
-	listModel listIndex: (` { True -> 1. False -> 2 . Undecided -> 3 } ` asDictionary at: (model perform: accessor)).
+	listModel listIndex: (` { true -> 1. false -> 2 . Undecided -> 3 } ` asDictionary at: (model perform: accessor)).
 	
 	self inputMorph model: listModel listGetter: #list indexGetter: #listIndex indexSetter: #listIndex:.
 
 	input := listModel listIndex.
 
-	value := `{ True . False . Undecided }` at: input.
+	value := `{ true . false . Undecided }` at: input.
 	
 	self callback: [:val | model perform: (accessor, ':') asSymbol with: val]! !
 
@@ -2447,13 +2463,13 @@ encodeJsonCtor
 	^JsonObject fromAssociations: { #v -> self . #c -> self class name }
 	! !
 
+!Boolean methodsFor: '*Archivist' stamp: 'DF 3/23/2024 23:25:11'!
+addFieldOn: anObject at: aKey to: aMold
+	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
 !Boolean methodsFor: '*Archivist' stamp: 'DF 3/23/2024 21:22:57'!
 encodeJsonCtor
 	^self! !
-
-!Boolean class methodsFor: '*Archivist' stamp: 'DF 3/23/2024 20:28:25'!
-addFieldOn: anObject at: aKey to: aMold
-	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
 
 !Float methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:26:54'!
 addFieldOn: anObject at: aKey to: aMold
