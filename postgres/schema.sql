@@ -20,7 +20,7 @@ CREATE TABLE revision (
 	oid integer REFERENCES vobject(oid),
 	rid integer, 
 
-	slots jsonb,
+	slots json,
 	description text,
 
 	PRIMARY KEY (oid,rid),
