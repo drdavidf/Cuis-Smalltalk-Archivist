@@ -1,6 +1,6 @@
-'From Cuis6.0 [latest update: #6153] on 23 March 2024 at 11:47:52 pm'!
+'From Cuis6.0 [latest update: #6153] on 24 March 2024 at 1:19:34 pm'!
 'Description '!
-!provides: 'Archivist' 1 212!
+!provides: 'Archivist' 1 220!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -437,7 +437,7 @@ openAddSlotDialog
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/21/2024 00:07:28'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 12:35:39'!
 openRemoveSlotDialog
 	
  | mold  |
@@ -447,13 +447,44 @@ openRemoveSlotDialog
 	mold := Mold new.
 	
 	(mold selectField)
-		label: 'Type';
+		label: 'Slot name';
 		on: #listIndex of: (ListModel with: selection slots keys :: listIndex: 1) ;
 		beRequired.
 
 	mold when: #edited evaluate:[ self removeSlotFromSelectedObject: (mold fields at:1) value ].
 	
 	mold openDialog: 'Remove a slot' at: Sensor mousePoint.
+	
+	! !
+
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 13:02:12'!
+openRenameSlotDialog
+	
+ | mold  oldv newv |
+
+	selection slots ifEmpty:[^self].
+
+	oldv := ListModel with: selection slots keys :: listIndex: 1.
+	
+	newv := ValueHolder with:''.
+		
+	mold := Mold new.
+	
+	(mold selectField)
+		label: 'Slot name';
+		on: #listIndex of: oldv ;
+		beRequired.
+		
+	(mold stringField)
+		label: 'New name';
+		on: #propertyValue of: newv; 
+		addCondition:[:input | (selection slots includesKey: input) not and: [(selection outgoing includesKey: input) not ] ] 
+		labeled: [:input | 'duplicate name'];
+		beRequired.
+
+	mold when: #edited evaluate:[ self renameSlotInSelectedObject: oldv selectedItem to: newv propertyValue].
+	
+	mold openDialog: 'Rename a slot' at: Sensor mousePoint.
 	
 	! !
 
@@ -467,6 +498,31 @@ removeSlotFromSelectedObject: aString
 	self selectionIndex: self selectionIndex.
 	
 	! !
+
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 13:01:24'!
+renameSlotInSelectedObject: oldName  to: newName
+	
+	| obj |
+	
+	oldName = newName ifTrue:[^self].
+	
+	self assert: newName notNil.
+	
+	self assert: selection notNil.
+	
+	self assert: (selection slots includesKey: oldName).
+
+	self assert: (selection slots includesKey: newName) not.
+
+	obj := selection slots at: oldName.
+	
+	selection slots 	at: newName replacingKey: oldName put:obj.
+	
+	selection dirty: true.
+	
+	self selectionIndex: self selectionIndex.
+	
+! !
 
 !ArchivistCacheModel methodsFor: 'testing' stamp: 'DF 3/21/2024 14:26:13'!
 isConnected
@@ -531,13 +587,13 @@ alert: aTitleString details: aBodyString
 
 	p openInWorld ! !
 
-!ArchivistCacheModel methodsFor: 'server calls' stamp: 'DF 3/12/2024 19:22:20'!
+!ArchivistCacheModel methodsFor: 'server calls' stamp: 'DF 3/24/2024 13:19:30'!
 commit: aText
 
 	[
 		cache checkin: aText asString.
 	
-		self changed: #oidDisplayList ; changed: #selectionDetails
+		self changed: #oidDisplayList ; changed: #selectionDetails ; changed: #cacheState.
 	
 	] on: PgError do:[:ex | self alert: (ex info at:#M) details: (ex info at:#H) ] on: NetworkError do:[:ex | self alert: 'Network Error' details: ex messageText].
 ! !
@@ -848,7 +904,7 @@ cancel
 
 	^self update: #slots! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 22:58:14'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/24/2024 12:33:36'!
 getMenu
 
 	| aMenu |
@@ -867,6 +923,12 @@ getMenu
 			#label 			-> 			'remove slot ...'.
 			#selector 		-> 			#openRemoveSlotDialog.
 			#balloonText 	-> 			'Remove a slot from the object.'
+		} asDictionary.
+
+		{
+			#label 			-> 			'rename slot ...'.
+			#selector 		-> 			#openRenameSlotDialog.
+			#balloonText 	-> 			'Change a slot''s name.'
 		} asDictionary.
 		
 		nil.
