@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 21 March 2024 at 5:47:00 pm'!
+'From Cuis6.3 [latest update: #6253] on 21 March 2024 at 6:03:06 pm'!
 'Description '!
-!provides: 'Archivist' 1 181!
+!provides: 'Archivist' 1 182!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -888,7 +888,7 @@ residentObjectsMenu
 
 	^aMenu! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 21:54:40'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/21/2024 18:02:51'!
 setUp
 
 	| settings statement |
@@ -909,7 +909,7 @@ setUp
 	[		
 		statement := client prepare: 'CALL new_changeset($1, $2, $3)'.
 
-		statement executeQuery: { 'init test' .  '[{"oid":-1,"slots":{}, "description":"", "links":[]}]' . 0 }.
+		statement executeQuery: { 'init test' .  ('[\{"oid":-1,"slots":\{\}, "description":{1}, "links":[]\}]' format:{ AnnotatedText fromString:'' :: asXML jsonPrint  }). 0 }.
 	
 	]  ensure:[ 	statement close ].
 
