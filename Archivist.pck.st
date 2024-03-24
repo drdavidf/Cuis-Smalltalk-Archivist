@@ -1,6 +1,6 @@
-'From Cuis6.3 [latest update: #6253] on 21 March 2024 at 6:03:06 pm'!
+'From Cuis6.3 [latest update: #6253] on 24 March 2024 at 7:07:24 pm'!
 'Description '!
-!provides: 'Archivist' 1 182!
+!provides: 'Archivist' 1 183!
 !requires: 'PostgresAdapter' 1 62 nil!
 !requires: 'UI-Mold' 1 15 nil!
 !requires: 'LayoutAlgebra' 1 4 nil!
@@ -21,6 +21,16 @@ TextProvider subclass: #ArchivistCacheModel
 ArchivistCacheModel class
 	instanceVariableNames: ''!
 
+!classDefinition: #Undecided category: #'Archivist-Core'!
+Boolean subclass: #Undecided
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-Core'!
+!classDefinition: 'Undecided class' category: #'Archivist-Core'!
+Undecided class
+	instanceVariableNames: ''!
+
 !classDefinition: #NonDeterministicChoice category: #'Archivist-Core'!
 OrderedCollection subclass: #NonDeterministicChoice
 	instanceVariableNames: ''
@@ -31,6 +41,16 @@ OrderedCollection subclass: #NonDeterministicChoice
 NonDeterministicChoice class
 	instanceVariableNames: ''!
 
+!classDefinition: #ArchiDropDownMorph category: #'Archivist-UI'!
+DropDownListMorph subclass: #ArchiDropDownMorph
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-UI'!
+!classDefinition: 'ArchiDropDownMorph class' category: #'Archivist-UI'!
+ArchiDropDownMorph class
+	instanceVariableNames: ''!
+
 !classDefinition: #ArchiLinkMorph category: #'Archivist-UI'!
 LayoutMorph subclass: #ArchiLinkMorph
 	instanceVariableNames: 'button entry model navigator'
@@ -39,6 +59,16 @@ LayoutMorph subclass: #ArchiLinkMorph
 	category: 'Archivist-UI'!
 !classDefinition: 'ArchiLinkMorph class' category: #'Archivist-UI'!
 ArchiLinkMorph class
+	instanceVariableNames: ''!
+
+!classDefinition: #LowButtonMorph category: #'Archivist-UI'!
+PluggableButtonMorph subclass: #LowButtonMorph
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-UI'!
+!classDefinition: 'LowButtonMorph class' category: #'Archivist-UI'!
+LowButtonMorph class
 	instanceVariableNames: ''!
 
 !classDefinition: #MoldScrollPane category: #'Archivist-UI'!
@@ -71,6 +101,16 @@ TestCase subclass: #TestArchiCache
 TestArchiCache class
 	instanceVariableNames: ''!
 
+!classDefinition: #DropDownSelectField category: #'Archivist-UI'!
+SelectField subclass: #DropDownSelectField
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-UI'!
+!classDefinition: 'DropDownSelectField class' category: #'Archivist-UI'!
+DropDownSelectField class
+	instanceVariableNames: ''!
+
 !classDefinition: #AsciiStringField category: #'Archivist-UI'!
 Field subclass: #AsciiStringField
 	instanceVariableNames: ''
@@ -79,6 +119,16 @@ Field subclass: #AsciiStringField
 	category: 'Archivist-UI'!
 !classDefinition: 'AsciiStringField class' category: #'Archivist-UI'!
 AsciiStringField class
+	instanceVariableNames: ''!
+
+!classDefinition: #KleeneanField category: #'Archivist-UI'!
+Field subclass: #KleeneanField
+	instanceVariableNames: 'listModel'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-UI'!
+!classDefinition: 'KleeneanField class' category: #'Archivist-UI'!
+KleeneanField class
 	instanceVariableNames: ''!
 
 !classDefinition: #LinkField category: #'Archivist-UI'!
@@ -131,6 +181,16 @@ Object subclass: #ArchivistCache
 ArchivistCache class
 	instanceVariableNames: ''!
 
+!classDefinition: #Enumeration category: #'Archivist-Core'!
+Object subclass: #Enumeration
+	instanceVariableNames: 'oid index obj'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'Archivist-Core'!
+!classDefinition: 'Enumeration class' category: #'Archivist-Core'!
+Enumeration class
+	instanceVariableNames: ''!
+
 !classDefinition: #VersionedEntity category: #'Archivist-Core'!
 Object subclass: #VersionedEntity
 	instanceVariableNames: ''
@@ -177,14 +237,16 @@ addSlotToSelectedObject: aString default: anObject
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/21/2024 00:04:21'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/23/2024 23:35:34'!
 openAddSlotDialog
 	
  | mold  defaults |
 
 	defaults := OrderedDictionary new.
 	
-	{#Link -> nil . #Integer -> 0 . #Float -> 0.0 . #String -> '' . #Boolean -> true . #Date -> Date today . #Time -> Time now } do: [:each | defaults at: each key put: each value ].
+	{#Link -> nil . #Integer -> 0 . #Float -> 0.0 . #String -> '' . #Boolean -> Undecided . #Date -> Date today . #Time -> Time now } do: [:each | defaults at: each key put: each value ].
+	
+	self enumerations keysAndValuesDo:[:key :eobj | defaults at: key put: (Enumeration new oid: eobj oid; obj: eobj ; index:1;  yourself) ].
 	
 	mold := Mold new.
 	
@@ -203,7 +265,7 @@ openAddSlotDialog
 	
 	! !
 
-!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/21/2024 00:07:28'!
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 12:35:39'!
 openRemoveSlotDialog
 	
  | mold  |
@@ -213,13 +275,44 @@ openRemoveSlotDialog
 	mold := Mold new.
 	
 	(mold selectField)
-		label: 'Type';
+		label: 'Slot name';
 		on: #listIndex of: (ListModel with: selection slots keys :: listIndex: 1) ;
 		beRequired.
 
 	mold when: #edited evaluate:[ self removeSlotFromSelectedObject: (mold fields at:1) value ].
 	
 	mold openDialog: 'Remove a slot' at: Sensor mousePoint.
+	
+	! !
+
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 13:02:12'!
+openRenameSlotDialog
+	
+ | mold  oldv newv |
+
+	selection slots ifEmpty:[^self].
+
+	oldv := ListModel with: selection slots keys :: listIndex: 1.
+	
+	newv := ValueHolder with:''.
+		
+	mold := Mold new.
+	
+	(mold selectField)
+		label: 'Slot name';
+		on: #listIndex of: oldv ;
+		beRequired.
+		
+	(mold stringField)
+		label: 'New name';
+		on: #propertyValue of: newv; 
+		addCondition:[:input | (selection slots includesKey: input) not and: [(selection outgoing includesKey: input) not ] ] 
+		labeled: [:input | 'duplicate name'];
+		beRequired.
+
+	mold when: #edited evaluate:[ self renameSlotInSelectedObject: oldv selectedItem to: newv propertyValue].
+	
+	mold openDialog: 'Rename a slot' at: Sensor mousePoint.
 	
 	! !
 
@@ -233,6 +326,31 @@ removeSlotFromSelectedObject: aString
 	self selectionIndex: self selectionIndex.
 	
 	! !
+
+!ArchivistCacheModel methodsFor: 'editing slots' stamp: 'DF 3/24/2024 13:01:24'!
+renameSlotInSelectedObject: oldName  to: newName
+	
+	| obj |
+	
+	oldName = newName ifTrue:[^self].
+	
+	self assert: newName notNil.
+	
+	self assert: selection notNil.
+	
+	self assert: (selection slots includesKey: oldName).
+
+	self assert: (selection slots includesKey: newName) not.
+
+	obj := selection slots at: oldName.
+	
+	selection slots 	at: newName replacingKey: oldName put:obj.
+	
+	selection dirty: true.
+	
+	self selectionIndex: self selectionIndex.
+	
+! !
 
 !ArchivistCacheModel methodsFor: 'accessing' stamp: 'DF 3/8/2024 16:05:55'!
 cache
@@ -293,13 +411,13 @@ alert: aTitleString details: aBodyString
 
 	p openInWorld ! !
 
-!ArchivistCacheModel methodsFor: 'server calls' stamp: 'DF 3/12/2024 19:22:20'!
+!ArchivistCacheModel methodsFor: 'server calls' stamp: 'DF 3/24/2024 13:19:30'!
 commit: aText
 
 	[
 		cache checkin: aText asString.
 	
-		self changed: #oidDisplayList ; changed: #selectionDetails
+		self changed: #oidDisplayList ; changed: #selectionDetails ; changed: #cacheState.
 	
 	] on: PgError do:[:ex | self alert: (ex info at:#M) details: (ex info at:#H) ] on: NetworkError do:[:ex | self alert: 'Network Error' details: ex messageText].
 ! !
@@ -350,14 +468,10 @@ resolve: aValueHolder
 	] on: PgError do:[:ex | self alert: (ex info at:#M) details: (ex info at:#H) ] on: NetworkError do:[:ex | self alert: 'Network Error' details: ex messageText].
 	! !
 
-!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/21/2024 17:46:49'!
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 19:11:11'!
 cacheState
 
-	| dt |
-	
-	dt := cache expires date = Date today ifTrue:['today'] ifFalse:['on ', cache expires date asString].
-	
-	^'cache has {1} resident objects, {2} new objects, {3} modified objects. updated {4} at {5}' format:{ cache old size . cache fresh size . cache dirtySize . dt . cache expires time print24} ! !
+	^'cache has {1} resident objects, {2} new objects, {3} modified objects. updated on {4} at {5}' format:{ cache old size . cache fresh size . cache dirtySize . cache expires date . cache expires time } ! !
 
 !ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 22:05:50'!
 connectionStatus
@@ -392,6 +506,19 @@ description: aString
 	
 	^true
 ! !
+
+!ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 15:33:24'!
+enumerations
+
+	| ebase  global |
+	
+	global := cache resolve:1.
+	
+	ebase := global linkAt: #Enumeration.
+
+	^​ global outgoing select:[:each | |v| v := each linkAt: #prototype ifAbsent:[nil]. v = ebase ].
+	
+	! !
 
 !ArchivistCacheModel methodsFor: 'as yet unclassified' stamp: 'DF 3/14/2024 21:51:17'!
 incoming
@@ -613,6 +740,26 @@ revertSelectedObject
 isConnected
 	^connection notNil and:[connection isConnected ].! !
 
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:31:01'!
+addFieldOn: anObject at: aKey to: aMold
+	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:27:22'!
+encodeJsonCtor
+
+	^JsonObject fromAssociations: { #v -> self . #c -> self name  }
+! !
+
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:17:13'!
+fromString: aString
+
+	^self! !
+
+!Undecided class methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:25:46'!
+jsonWriteOn: aWriteStream
+
+	aWriteStream nextPutAll:'null'.! !
+
 !NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 09:25:27'!
 addFieldOn: anObject at: aKey to: aMold
 
@@ -639,6 +786,48 @@ printOn: aStream
 !NonDeterministicChoice methodsFor: 'as yet unclassified' stamp: 'DF 3/10/2024 23:27:37'!
 removeIncoming: aVersionedObject 
 	! !
+
+!ArchiDropDownMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:06:48'!
+buttonWidth 
+	^button morphWidth! !
+
+!ArchiDropDownMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:54:08'!
+installButtons
+	
+	|  arrowButton |
+	
+	button := LowButtonMorph new ::
+		borderWidth: 0;
+		model: self;
+		action: #toggleDropDownList.
+	self updateButton.
+	arrowButton := LowButtonMorph new ::
+		iconDrawSelector: #drawDownIcon;
+		model: self;
+		action: #toggleDropDownList;
+		morphExtent: Theme current scrollbarThickness asPoint.
+	
+	self 
+		addMorph: button 
+		layoutSpec: (LayoutSpec keepMorphExtent offAxisEdgeWeight: #center).
+	self	
+		addMorph: arrowButton 
+		layoutSpec: (LayoutSpec keepMorphExtent offAxisEdgeWeight: #center).
+	self morphExtent: 0@0. "Shrink to the minimum"	
+	
+	button layoutSpec proportionalWidth: 1.0.
+	
+	self color: Color transparent.
+	
+	self separation: 4 @ 0.! !
+
+!ArchiDropDownMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:22:10'!
+toggleDropDownList
+
+	super toggleDropDownList .
+	
+	dropDownList owner ifNotNil:[
+		dropDownList morphExtent: self morphWidth @ dropDownList desiredHeight .].! !
 
 !ArchiLinkMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 13:18:17'!
 backgroundColor: aColor
@@ -695,7 +884,27 @@ pressed
 
 	navigator navigateTo: (Integer readFrom: entry contents readStream)! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 13:15:32'!
+!LowButtonMorph methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:41:26'!
+minimumExtent
+	
+	| unit f |
+	
+	label ifNil: [
+		^super minimumExtent ].
+
+	"Assure some space for text."
+	
+	f := font ifNil:[ Preferences at: #windowTitleFont ] ifNotNil:[font].
+	
+	unit := f pointSize.
+	^(4 * unit) @ f lineSpacing.! !
+
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:03:54'!
+cancel
+
+	^self update: #slots! !
+
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/24/2024 12:33:36'!
 getMenu
 
 	| aMenu |
@@ -715,6 +924,12 @@ getMenu
 			#selector 		-> 			#openRemoveSlotDialog.
 			#balloonText 	-> 			'Remove a slot from the object.'
 		} asDictionary.
+
+		{
+			#label 			-> 			'rename slot ...'.
+			#selector 		-> 			#openRenameSlotDialog.
+			#balloonText 	-> 			'Change a slot''s name.'
+		} asDictionary.
 		
 		nil.
 		
@@ -724,6 +939,13 @@ getMenu
 			#selector 		-> 			#save.
 			#balloonText 	-> 			'Accept the changes.'
 		} asDictionary.
+
+		{
+			#label 			-> 			'cancel'.
+			#object -> self.
+			#selector 		-> 			#cancel.
+			#balloonText 	-> 			'Cancel the changes.'
+		} asDictionary.
 		
 	}.
 	^aMenu! !
@@ -732,12 +954,12 @@ getMenu
 objectGetter: aSymbol
 	objectGetter := aSymbol! !
 
-!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/11/2024 19:07:39'!
+!MoldScrollPane methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:44:32'!
 save
 
 	mold validate.
 	
-	mold isValid ifTrue: [ 
+	mold isValid ifTrue: [
 		mold save .  
 		mold fields allSatisfy:# isValid :: "could be false if something goes wrong during the save (e.g. with access to database) "
 			ifTrue: [		model updateSlots ] ].! !
@@ -759,7 +981,7 @@ update: aSymbol
 	
 	self scroller: form.! !
 
-!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/20/2024 21:30:27'!
+!ArchivistCacheWindow methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:47:00'!
 buildMorphicWindow
 
 self layoutMorph addMorph:
@@ -772,13 +994,13 @@ self layoutMorph addMorph:
 	(MoldScrollPane new model: model ; objectGetter: #slots ; yourself :: ph:1 ;pw:(1/2))
 	<+>
 	(PluggableListMorph model: model listGetter: #incoming indexGetter: #incomingSelectionIndex indexSetter: #incomingSelectionIndex: :: ph:1 ; pw:(1/4)) ph:0.3
-)
+) 
 </>
-(TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:18)
+((TextModelMorph textProvider: model textGetter: #selectionDetails  :: pw:1.0 ; fh:32)
 </>
-(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: author: model user :: pw:1.0 ; ph:0.7)
+(AnnotatedTextMorph textProvider: model textGetter: #description textSetter:#description: author: model user :: pw:1.0 ; ph:1.0)
 </>
-((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) .
+((TextModelMorph textProvider: model textGetter: #connectionStatus  :: pw:1.0 ; fh:32) + (PluggableButtonMorph model: model stateGetter: nil action: #openConnectionDialog :: label:'connect ...' ) fh:48) ph:0.7).
 
 self setLabel:'Archivist Browser'.
 
@@ -888,7 +1110,7 @@ residentObjectsMenu
 
 	^aMenu! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/21/2024 18:02:51'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 13:41:32'!
 setUp
 
 	| settings statement |
@@ -909,7 +1131,7 @@ setUp
 	[		
 		statement := client prepare: 'CALL new_changeset($1, $2, $3)'.
 
-		statement executeQuery: { 'init test' .  ('[\{"oid":-1,"slots":\{\}, "description":{1}, "links":[]\}]' format:{ AnnotatedText fromString:'' :: asXML jsonPrint  }). 0 }.
+		statement executeQuery: { 'init test' . ( '[\{"oid":-1,"slots":\{\}, "description":{1}, "links":[]\}]' format: { AnnotatedText fromString:'' :: asXML jsonPrint } ) . 0 }.
 	
 	]  ensure:[ 	statement close ].
 
@@ -1058,6 +1280,51 @@ testDelete
 	
 ! !
 
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 13:55:22'!
+testEnumeration
+
+	| root enum |
+	
+	root := cache resolve:1.
+	
+	self assert: root oid = 1.
+	
+	enum := cache clone: root.
+	
+	enum 
+		at: #red put: 1; 
+		at: #green put: 2;
+		at: #blue put: 3.
+		
+	cache checkin: 'testEnumeration create enum'.
+	
+	cache := ArchivistCache new.
+	
+	cache connection: client.
+	
+	root := cache resolve: 1.
+	
+	enum := cache resolve: 2.
+
+	root at:#color put: (Enumeration new oid: enum oid ; index: 3; yourself).
+
+	cache checkin: 'testEnumeration add enum field to root'.
+	
+	cache := ArchivistCache new.
+	
+	cache connection: client.
+	
+	root := cache resolve: 1.
+
+	self assert: ((root at:#color) is: #Enumeration).
+
+	self assert: (root at:#color) oid equals: 2.
+	
+	self assert: (root at:#color) index equals: 3.
+
+	self assert: (root at:#color) values equals: { #red .#green . #blue }asOrderedCollection.
+	! !
+
 !TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/14/2024 13:43:24'!
 testLinks
 
@@ -1117,7 +1384,7 @@ testMergeConflicts
 	self assert: (root at:#y) equals: 13.
 ! !
 
-!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/12/2024 19:33:12'!
+!TestArchiCache methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 21:27:55'!
 testTypes
 
 	| root x |
@@ -1133,7 +1400,9 @@ testTypes
 		at: #s put: 'Hello, world' ;
 		at: #c put: DateAndTime now ;
 		at: #d put: Date today ;
-		at: #t put: Time now.
+		at: #t put: Time now ;
+		at: #u put: Undecided.
+
 		
 	cache checkin: 'testTypes'.
 	
@@ -1150,12 +1419,67 @@ testTypes
 	self assert: (x at:#c) equals: (root at:#c).
 	self assert: (x at:#d) equals: (root at:#d).
 	self assert: (x at:#t) equals: (root at:#t).
+	self assert: (x at:#u) equals: (root at:#u).
 ! !
+
+!DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:43:36'!
+inputMorphContents
+" The inputMorph had already changed the listModel, ask its listIndex "
+	^ listModel listIndex ! !
+
+!DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 23:23:57'!
+inputMorphInstance
+	^ ArchiDropDownMorph new! !
+
+!DropDownSelectField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:49:01'!
+on: accessor of: model
+
+	listModel := ListModel with: model values.
+	
+	listModel listIndex: (model perform: accessor).
+	
+	self inputMorph model: listModel listGetter: #list indexGetter: #listIndex indexSetter: #listIndex:.
+
+	input := model perform: accessor.
+
+	value := input.
+	
+	self callback: [:val | model perform: (accessor, ':') asSymbol with: val]! !
 
 !AsciiStringField methodsFor: 'as yet unclassified' stamp: 'DF 3/9/2024 20:34:40'!
 disinfect: aString
 	"Convert aString into the type of object that this field ultimately represents"
 	^aString asByteStringIfAscii! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:14:32'!
+highlightInputMorph
+	self inputMorph color: (self isValid 
+		ifTrue: [self inputMorph defaultColor]
+		ifFalse: [Color red muchLighter])! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:26:31'!
+inputMorphContents
+" The inputMorph had already changed the listModel, ask its listIndex "
+	^ `{ true . false . Undecided }` at:  listModel listIndex ! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:23:13'!
+inputMorphInstance
+	^ ArchiDropDownMorph new! !
+
+!KleeneanField methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 23:26:18'!
+on: accessor of: model
+
+	listModel := ListModel with: { 'Yes' . 'No' . 'Undecided' }.
+	
+	listModel listIndex: (` { true -> 1. false -> 2 . Undecided -> 3 } ` asDictionary at: (model perform: accessor)).
+	
+	self inputMorph model: listModel listGetter: #list indexGetter: #listIndex indexSetter: #listIndex:.
+
+	input := listModel listIndex.
+
+	value := `{ true . false . Undecided }` at: input.
+	
+	self callback: [:val | model perform: (accessor, ':') asSymbol with: val]! !
 
 !LinkField methodsFor: 'as yet unclassified' stamp: 'DF 3/8/2024 15:55:46'!
 disinfect: aString 
@@ -1498,6 +1822,29 @@ checkin: comment
 	next := -1.
 	! !
 
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:49:10'!
+decodeJsonCtor: jsonObj
+
+	| v |
+	
+	v := jsonObj decodeJsonCtor.
+	
+	v is:#Enumeration :: ifTrue:[ v obj: (self fetch: v oid) ]. "this will cause an infinite recursion if v oid is equal to the oid of the object we are currently fetching"
+
+	^v
+! !
+
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:13:14'!
+defer: oid
+
+	oid ifNil:[^nil]. 
+
+	self assert: oid > 0.
+	
+	^ vobjects at: oid ifAbsent:[ | vobj |
+		vobj := VersionedObjectStub new oid: oid ; cache: self ; yourself. 
+		vobjects at: oid put: vobj. vobj		]. ! !
+
 !ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/6/2024 20:43:34'!
 deferredFetch: oid
 
@@ -1509,7 +1856,7 @@ deferredFetch: oid
 		vobj := VersionedObjectStub new oid: oid ; cache: self ; yourself. 
 		vobjects at: oid put: vobj. vobj		]. ! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/9/2024 22:50:07'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:49:39'!
 fetch: oid
 
 	| attrs |
@@ -1519,11 +1866,13 @@ fetch: oid
 	self assert: oid > 0.
 	
 	attrs := self spCheckoutVobject: oid.
+	
+	attrs at: #slots put: (attrs at: #slots :: collect:[:each | self decodeJsonCtor: each ]).
 
 	^ VersionedObject from: attrs.
 ! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/9/2024 22:52:10'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:49:52'!
 fetch: oid revision: rid
 
 	| attrs |
@@ -1538,18 +1887,20 @@ fetch: oid revision: rid
 	
 	attrs := self spCheckoutVobject: oid version: rid.
 
+	attrs at: #slots put: (attrs at: #slots :: collect:[:each | self decodeJsonCtor: each ]).
+
 	^ VersionedObject from: attrs.
 ! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/14/2024 13:43:24'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:13:15'!
 fetchLinks: oid
 
 	self assert: oid notNil.
 			
 	self spCheckoutLinks: oid :: do:[:each | | source target |
 		
-		source := self deferredFetch: (each at:#oid).
-		target := self deferredFetch: (each at:#oidtarget).
+		source := self defer: (each at:#oid).
+		target := self defer: (each at:#oidtarget).
 		
 		self assert: source notNil.
 		
@@ -1558,13 +1909,13 @@ fetchLinks: oid
 		
 	! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/10/2024 23:06:29'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 12:13:15'!
 fetchOutgoingLinks: oid version: rid
 
 	self assert: oid notNil.
 			
 	^self spCheckoutLinks: oid version: rid :: collect:[:each | 
-		 (each at:#name) -> (self deferredFetch: (each at:#oidtarget)) ] ::asDictionary
+		 (each at:#name) -> (self defer: (each at:#oidtarget)) ] ::asDictionary
 	! !
 
 !ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/12/2024 22:33:38'!
@@ -1595,7 +1946,7 @@ merge
 	expires := now.
 		! !
 
-!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/8/2024 21:04:09'!
+!ArchivistCache methodsFor: 'server operations' stamp: 'DF 3/22/2024 14:48:44'!
 refresh: oid
 
 	| vobj newobj | 
@@ -1611,8 +1962,10 @@ refresh: oid
 	vobj := vobjects at: oid.	
 
 	vobj removeAllOutgoingLinks.	
+	
+	newobj incoming: vobj incoming. 
 		
-	newobj become: vobj. 
+	vobj become: newobj. 
 	
 	self fetchLinks: oid.
 	! !
@@ -1686,6 +2039,66 @@ evict: oid
 	vobjects removeKey: oid.
 	! !
 
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:44:02'!
+addFieldOn: anObject at: aKey to: aMold
+
+	^(aMold fields add: DropDownSelectField new) on: #index of:(anObject at: aKey).! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:28:05'!
+encodeJsonCtor
+
+	^JsonObject fromAssociations: { #v -> (JsonObject fromAssociations:{ #oid -> oid . #i -> index }) . #c -> self class name }
+	! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:29:26'!
+index
+	^index! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/23/2024 20:49:30'!
+index: anInteger
+
+	index := anInteger ! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 13:02:49'!
+is: aSymbol
+	^#Enumeration = aSymbol or: [ super is: aSymbol ]! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:29:01'!
+obj: aVersionedObject
+
+	self assert: oid = aVersionedObject oid.
+	
+	obj := aVersionedObject.! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:29:11'!
+oid
+	^oid! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:25:59'!
+oid: anInteger
+
+	self assert: anInteger > 0.
+	
+	oid := anInteger ! !
+
+!Enumeration methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 13:03:33'!
+values
+	self assert: obj notNil.
+	
+	^obj slots keysSortedSafely! !
+
+!Enumeration class methodsFor: 'as yet unclassified' stamp: 'DF 3/22/2024 12:25:59'!
+fromString: aJsonObject
+
+	| oid index |
+	
+	oid := aJsonObject at:#oid :: asNumber.
+	
+	index := aJsonObject at:#i :: asNumber.
+	
+	^ self new oid: oid; index:index ; yourself
+	! !
+
 !VersionedEntity methodsFor: 'testing' stamp: 'DF 2/26/2024 20:58:06'!
 isRealized
 	^self subclassResponsibility ! !
@@ -1747,7 +2160,7 @@ clean
 	dirty := false.
 	! !
 
-!VersionedObject methodsFor: 'changes' stamp: 'DF 3/13/2024 10:55:46'!
+!VersionedObject methodsFor: 'changes' stamp: 'DF 3/22/2024 09:49:58'!
 fix: base
 
 	self assert: oid < 0.
@@ -1759,7 +2172,7 @@ fix: base
 
 	oid := oid * -1 + base.
 	
-	out do:[:each | each relink: (oid - base) * -1 to: self].
+	out do:[:each | each ifNotNil:[each relink: (oid - base) * -1 to: self] ].
 	
 	
 	! !
@@ -1903,6 +2316,10 @@ disconnect
 	in do:[:each | each nullifyOutgoingTo: self.  ].
 	
 ! !
+
+!VersionedObject methodsFor: 'links' stamp: 'DF 3/22/2024 14:45:01'!
+incoming: aCollection
+	in := aCollection! !
 
 !VersionedObject methodsFor: 'links' stamp: 'DF 3/21/2024 15:46:04'!
 link: aString to: aVersionedEntity 
@@ -2136,9 +2553,9 @@ encodeJsonCtor
 	^JsonObject fromAssociations: { #v -> self . #c -> self class name }
 	! !
 
-!Boolean methodsFor: '*Archivist' stamp: 'DF 3/8/2024 11:26:43'!
+!Boolean methodsFor: '*Archivist' stamp: 'DF 3/23/2024 23:25:11'!
 addFieldOn: anObject at: aKey to: aMold
-	^aMold checkboxField on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
+	^(aMold fields add: KleeneanField new) on: #valueAtKey of:(KeyHolder on: anObject at: aKey)! !
 
 !Boolean methodsFor: '*Archivist' stamp: 'DF 3/12/2024 20:03:43'!
 encodeJsonCtor
