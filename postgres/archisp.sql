@@ -15,14 +15,14 @@ END; $$
 
 ;
 
-CREATE OR REPLACE FUNCTION conflicts(_entities jsonb) RETURNS TABLE(oid int, rid int, head int)
+CREATE OR REPLACE FUNCTION conflicts(_entities json) RETURNS TABLE(oid int, rid int, head int)
 AS $$
-	SELECT j.oid, j.rid, vobject.head FROM (SELECT (value -> 'oid')::int as oid , (value -> 'rid')::int as rid FROM jsonb_array_elements(_entities)) AS j JOIN vobject ON j.oid = vobject.oid WHERE j.oid > 0 AND j.rid < vobject.head $$
+	SELECT j.oid, j.rid, vobject.head FROM (SELECT (value -> 'oid')::int as oid , (value -> 'rid')::int as rid FROM jsonb_array_elements(to_jsonb(_entities))) AS j JOIN vobject ON j.oid = vobject.oid WHERE j.oid > 0 AND j.rid < vobject.head $$
 LANGUAGE SQL ;
 
 ;
 
-CREATE OR REPLACE PROCEDURE new_changeset(_comment text, _entities jsonb, OUT _max_oid integer)
+CREATE OR REPLACE PROCEDURE new_changeset(_comment text, _entities json, OUT _max_oid integer)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -62,7 +62,7 @@ IF _max_oid IS NULL THEN
 	_max_oid := 0 ;
 END IF;
 
-FOR _entity IN SELECT * FROM jsonb_array_elements(_entities)
+FOR _entity IN SELECT * FROM json_array_elements(_entities)
 LOOP
 	call change_entity(_cid, _entity, _max_oid);
 END LOOP;
@@ -77,7 +77,7 @@ AS $$
 DECLARE
 _oid integer;
 _head integer;
-_slots jsonb;
+_slots json;
 _links jsonb;
 _link jsonb;
 _description text;
